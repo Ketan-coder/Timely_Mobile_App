@@ -4,8 +4,9 @@ import 'screens/login_screen.dart';
 import 'screens/home_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() async {
-  await dotenv.load(fileName: ".env");
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  // await dotenv.load(fileName: ".env");
   runApp(const MyApp());
 }
 
