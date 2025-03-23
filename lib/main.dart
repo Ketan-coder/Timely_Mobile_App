@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timely/components/bottom_nav_bar.dart';
 import 'screens/login_screen.dart';
-import 'screens/home_page.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() {
@@ -37,8 +37,45 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Auth Demo',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: _isAuthenticated ? const HomePage() : const LoginPage(),
+      debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system,
+      theme: ThemeData(
+        fontFamily: 'Poppins',
+        primaryColor: Colors.deepPurple,
+        primaryColorDark: Colors.deepPurple[800],
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          primary: Colors.deepPurple[100],
+          secondary: Colors.deepPurple[300],
+          onError: Colors.red[800],
+          tertiary: Colors.deepPurple[100],
+        ),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData.dark().copyWith(
+        textTheme: const TextTheme(
+          bodyMedium: TextStyle(
+            fontFamily: 'Poppins',
+          ),
+          bodyLarge: TextStyle(
+            fontFamily: 'Poppins',
+          ),
+          bodySmall: TextStyle(
+            fontFamily: 'Poppins',
+          ),
+        ),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          primary: Colors.deepPurple[100],
+          secondary: Colors.deepPurple[800],
+          onError: Colors.red[800],
+          tertiary: Colors.deepPurple[100],
+        ),
+        scaffoldBackgroundColor: Colors.black,
+      ),
+      home: _isAuthenticated
+          ? const BottomNavBar(currentIndex: 0)
+          : const LoginPage(),
     );
   }
 }
