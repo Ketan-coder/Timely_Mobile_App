@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
 import '../models/notebook.dart';
 import 'login_screen.dart';
@@ -66,8 +67,32 @@ class _HomePageState extends State<HomePage> {
                   return ListTile(
                     title: Text(notebook['title'] ?? 'Untitled'),
                     subtitle: Text('Last updated: ${notebook['updated_at']}'),
+                    trailing:
+                        notebook['is_password_protected'] == true
+                            ? Icon(Icons.lock, color: Colors.red)
+                            : SizedBox(),
                     onTap: () {
                       // TODO: Navigate to a detailed notebook view page
+                      notebook['is_password_protected'] == false
+                          ? Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => NotebookDetailPage(
+                                    notebookId: notebook['id'],
+                                  ),
+                            ),
+                          )
+                          : Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => NotebookDetailPage(
+                                    notebookId: notebook['id'],
+                                    isPasswordProtected: true,
+                                  ),
+                            ),
+                          );
                     },
                   );
                 },
