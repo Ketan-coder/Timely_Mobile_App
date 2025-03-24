@@ -4,6 +4,8 @@ import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
 import 'package:flutter_html/flutter_html.dart';
 
+import '../components/bottom_nav_bar.dart';
+
 class NotebookDetailPage extends StatefulWidget {
   final int notebookId;
   final bool isPasswordProtected;
@@ -72,6 +74,36 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     }
   }
 
+  Future<void> _deleteNotebook(int notebookID, String NotebookName) async {
+    final url = Uri.parse(
+      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget
+          .notebookId}/',
+    );
+    final response = await http.delete(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $_token', // Replace with actual token
+      },
+    );
+    print(response);
+    if (response.statusCode == 204) {
+      ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(content: Text('${NotebookName} has been Deleted Successfully'),
+          backgroundColor: Colors.green,),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const BottomNavBar(currentIndex: 0,)),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Something went wrong!'),
+          backgroundColor: Colors.red,),
+      );
+    }
+  }
+
   Future<void> _fetchNotebookDetails() async {
     final url = Uri.parse(
       'https://timely.pythonanywhere.com/api/v1/notebooks/${widget
@@ -96,6 +128,33 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _showDeleteConfirmationDialog(int notebookID, String notebookName) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // Prevent dialog from closing when tapping outside
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+          title: const Text("Delete Notebook"),
+          content: Text("Are you sure you want to delete '$notebookName'? This action cannot be undone."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(), // ❌ Cancel (Close Dialog)
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // ✅ Close dialog before deletion
+                await _deleteNotebook(notebookID, notebookName);
+              },
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -156,11 +215,45 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                   ),
                   child: IconButton(
                     onPressed: () {
-                      print('Pressed');
+                      _showDeleteConfirmationDialog(_notebookData?['id'],_notebookData?['title']);
                     },
                     icon: const Icon(Icons.delete_forever_rounded),
                   ),
                 )),
+          ],
+        ),
+        Row(
+          children: [
+            Expanded(
+                flex: 3,
+                child: Container(
+                  padding: const EdgeInsets.all(8.0),
+                  margin: const EdgeInsets.all(5),
+                  // color: Colors.black,
+                  decoration: BoxDecoration(
+                    color: isFavourite
+                        ? Colors.red[100]
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: Colors.deepPurple.shade100, width: 2),
+                  ),
+                  child: Text("Pages"),
+                )),
+            Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(8.0),
+                  margin: const EdgeInsets.all(5),
+                  // color: Colors.black,
+                  decoration: BoxDecoration(
+                    // color: note.isFavorite ? Colors.red : Colors.deepPurple[100],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: Colors.deepPurple.shade100, width: 2),
+                  ),
+                  child: Text("Sub Pages"),
+                )
+            ),
           ],
         ),
       ],
