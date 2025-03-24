@@ -3,7 +3,6 @@ import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
 import '../models/notebook.dart';
 import 'login_screen.dart';
-
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -13,6 +12,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> _notebooks = [];
+  final double _titleOpacity = 1.0; // Controls title visibility
 
   @override
   void initState() {
@@ -46,89 +46,91 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-          return <Widget>[
+      body: NotificationListener<ScrollNotification>(
+        onNotification: (scrollInfo) {
+          // setState(() {
+          //   _titleOpacity = (1 - (scrollInfo.metrics.pixels / 100)).clamp(0, 1);
+          // });
+          return true;
+        },
+        child: CustomScrollView(
+          slivers: [
             SliverAppBar(
               backgroundColor: Colors.black,
-              expandedHeight: 190.0,
+              expandedHeight: 250.0,
               floating: false,
               pinned: true,
-              snap: false,
               toolbarHeight: 60.0,
               actions: [
-                IconButton(onPressed: () async {
-                  await _logout;
-                }, icon: Icon(Icons.logout), color: Theme
-                    .of(context)
-                    .colorScheme
-                    .primary,)
+                IconButton(
+                  onPressed: () => _logout(context),
+                  icon: const Icon(Icons.logout),
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ],
-              flexibleSpace: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  return FlexibleSpaceBar(
-                    centerTitle: true,
-                    //title: Text(
-                    //  "Notes",
-                    //  style: TextStyle(
-                    //    color: Theme.of(context).colorScheme.tertiary ?? Colors.white, // Default fallback color
-                    //    fontSize: 20.0,
-                    //    fontWeight: FontWeight.w400,
-                    //  ),
-                    //),
-                    expandedTitleScale: 2,
-                    background: Image.network(
+              flexibleSpace: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.network(
                       "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain",
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
                           color: Colors.grey,
-                          // ✅ Fallback background if image fails
                           child: const Center(
-                              child: Text("Image failed to load")),
+                            child: Text("Image failed to load"),
+                          ),
                         );
                       },
                     ),
-                  );
-                },
+                  ),
+                  Positioned(
+                    left: 20,
+                    bottom: 20,
+                    child: Opacity(
+                      opacity: _titleOpacity,
+                      child: Text(
+                        "Notebooks",
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.tertiary ?? Colors.white,
+                          fontSize: 42,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-
-          ];
-        },
-        body: _notebooks.isEmpty
-            ? const Center(child: Text('No notebooks found!'))
-            : ListView.builder(
-          itemCount: _notebooks.length,
-          itemBuilder: (context, index) {
-            final notebook = _notebooks[index];
-            bool isProtected = notebook['is_password_protected'] ??
-                false; // ✅ Null-safety fix
-
-            return ListTile(
-              textColor: Theme
-                  .of(context)
-                  .colorScheme
-                  .primary,
-              title: Text(notebook['title'] ?? 'Untitled'),
-              subtitle: Text('Last updated: ${notebook['updated_at']}'),
-              trailing: isProtected
-                  ? const Icon(Icons.lock, color: Colors.red)
-                  : const SizedBox(),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        NotebookDetailPage(
-                          notebookId: notebook['id'],
-                          isPasswordProtected: isProtected,
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                  final notebook = _notebooks[index];
+                  bool isProtected = notebook['is_password_protected'] ?? false;
+                  return ListTile(
+                    textColor: Theme.of(context).colorScheme.surface,
+                    title: Text(notebook['title'] ?? 'Untitled'),
+                    subtitle: Text('Last updated: ${notebook['updated_at']}'),
+                    trailing: isProtected
+                        ? const Icon(Icons.lock, color: Colors.red)
+                        : const SizedBox(),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotebookDetailPage(
+                            notebookId: notebook['id'],
+                            isPasswordProtected: isProtected,
+                          ),
                         ),
-                  ),
-                );
-              },
-            );
-          },
+                      );
+                    },
+                  );
+                },
+                childCount: _notebooks.length,
+              ),
+            ),
+          ],
         ),
       ),
     );

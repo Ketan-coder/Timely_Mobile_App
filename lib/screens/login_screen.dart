@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
+import '../components/bottom_nav_bar.dart';
 import '../models/notebook.dart';
 import 'home_page.dart';
 
@@ -64,7 +65,7 @@ class _LoginPageState extends State<LoginPage> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
+          MaterialPageRoute(builder: (context) => const BottomNavBar(currentIndex: 0,)),
         );
       }
     } else {
