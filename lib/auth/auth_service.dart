@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/notebook.dart';
+import 'package:http/http.dart' as http;
 
 class AuthService {
   static Future<void> saveToken(String token) async {
@@ -39,4 +42,70 @@ class AuthService {
     }
     return [];
   }
+
+  static Future<void> fetchNotebooks(String token) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return;
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Notebooks fetched successfully!");
+        print("Notebook Data: ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<Notebook> notebooks = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        // Store notebooks locally
+        await saveNotebooksLocally(notebooks);
+      } catch (e) {
+        print("Error parsing response: $e");
+      }
+    } else {
+      print("Failed to fetch notebooks: ${response.body}");
+    }
+  }
+
+  // static Future<Map<String, dynamic>?> fetchNotebookDetails(String token, int notebookId) async {
+  //   final url = Uri.parse(
+  //     'https://timely.pythonanywhere.com/api/v1/notebooks/$notebookId/',
+  //   );
+  //   final response = await http.get(
+  //     url,
+  //     headers: {
+  //       'Content-Type': 'application/json',
+  //       'Authorization': 'Token $token', // Replace with actual token
+  //     },
+  //   );
+  //
+  //   if (response.statusCode == 200) {
+  //     Map<String, dynamic>? notebookData = jsonDecode(response.body);
+  //     return notebookData;
+  //   } else {
+  //     Map<String, dynamic>? notebookData = [] as Map<String, dynamic>?;
+  //     return notebookData;
+  //   }
+  // }
 }

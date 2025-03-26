@@ -1,10 +1,12 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
 import '../models/notebook.dart';
 import 'login_screen.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -71,6 +73,85 @@ class _HomePageState extends State<HomePage> {
         MaterialPageRoute(builder: (context) => const LoginPage()),
       );
     }
+  }
+
+  bool _checkPassword(String inputedPassword, String realPasswordHash) {
+    // Hash the entered password
+    // var bytes = utf8.encode(inputedPassword);
+    // var hashedPassword = sha256.convert(bytes).toString();
+
+    // Compare with the real hash
+    return inputedPassword == realPasswordHash;
+  }
+
+  Future<void> _showPasswordInputDialog(BuildContext context, int notebookID, String notebookName, String realPasswordHash, bool isPasswordProtected) async {
+    if (!isPasswordProtected) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => NotebookDetailPage(notebookId: notebookID)),
+      );
+      return; // Stop execution, no need to show password dialog
+    }
+
+    TextEditingController passwordController = TextEditingController();
+    bool isWrongPassword = false;
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false, // Prevent closing when tapping outside
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+              title: const Text("Enter Password"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Enter the password to access '$notebookName'."),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true, // Hide password input
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      errorText: isWrongPassword ? "Incorrect password" : null,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(), // ❌ Cancel
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    String inputPassword = passwordController.text.trim();
+
+                    if (_checkPassword(inputPassword, realPasswordHash)) {
+                      Navigator.of(context).pop(); // ✅ Close dialog
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotebookDetailPage(notebookId: notebookID),
+                        ),
+                      );
+                    } else {
+                      // ❌ Wrong password, show error
+                      setState(() {
+                        isWrongPassword = true;
+                      });
+                    }
+                  },
+                  child: const Text("Proceed", style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -161,16 +242,17 @@ class _HomePageState extends State<HomePage> {
                       trailing: isProtected
                           ? const Icon(Icons.lock, color: Colors.red)
                           : const SizedBox(),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NotebookDetailPage(
-                              notebookId: notebook['id'],
-                              isPasswordProtected: isProtected,
-                            ),
-                          ),
-                        );
+                      onTap: () async {
+                        await _showPasswordInputDialog(context,notebook['id'],notebook['title'],notebook['password'].toString(),isProtected);
+                        // Navigator.push(
+                        //   context,
+                        //   MaterialPageRoute(
+                        //     builder: (context) => NotebookDetailPage(
+                        //       notebookId: notebook['id'],
+                        //       isPasswordProtected: isProtected,
+                        //     ),
+                        //   ),
+                        // );
                       },
                     );
                   },
