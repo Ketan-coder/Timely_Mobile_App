@@ -8,15 +8,18 @@ class MyTextField extends StatelessWidget {
   final double width;
   final double height;
   final int maxlines;
-  const MyTextField(
-      {super.key,
-      required this.controller,
-      required this.hintext,
-      required this.obscuretext,
-       this.prefixicon,
-      required this.width,
-      required this.height,
-      required this.maxlines});
+  final suffixicon;
+
+  const MyTextField({super.key,
+    required this.controller,
+    required this.hintext,
+    required this.obscuretext,
+    this.prefixicon,
+    required this.width,
+    required this.height,
+    required this.maxlines,
+    this.suffixicon,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,11 +31,20 @@ class MyTextField extends StatelessWidget {
         maxLines: maxlines,
         decoration: InputDecoration(
           enabledBorder: OutlineInputBorder(
-            borderSide: BorderSide(width: 2,color: Theme.of(context).colorScheme.primary),
+            borderSide: BorderSide(width: 2, color: Theme
+                .of(context)
+                .colorScheme
+                .primary),
           ),
-          contentPadding: EdgeInsets.symmetric(horizontal: width, vertical: height),  // Adjust these values.
+          contentPadding: EdgeInsets.symmetric(
+              horizontal: width, vertical: height),
+          // Adjust these values.
           prefixIcon: prefixicon,
-          fillColor: Theme.of(context).colorScheme.background,
+          suffixIcon: suffixicon,
+          fillColor: Theme
+              .of(context)
+              .colorScheme
+              .inverseSurface,
           filled: true,
           hintText: hintext,
           // keyboardType: TextInputType.number,

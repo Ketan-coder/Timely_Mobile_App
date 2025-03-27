@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:timely/components/button.dart';
+import 'package:timely/components/labels.dart';
 import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
 import '../components/bottom_nav_bar.dart';
+import '../components/custom_snack_bar.dart';
+import '../components/text_field.dart';
 import '../models/notebook.dart';
 import 'home_page.dart';
 
@@ -21,6 +25,20 @@ class _LoginPageState extends State<LoginPage> {
 
 
   Future<void> _login() async {
+    if (_usernameController.text
+        .trim()
+        .isEmpty) {
+      showAnimatedSnackBar(
+          context, "Username cannot be empty", isError: true, isTop: true);
+      return;
+    } else if (_passwordController.text
+        .trim()
+        .isEmpty) {
+      showAnimatedSnackBar(
+          context, "Password cannot be empty", isError: true, isTop: true);
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -59,20 +77,17 @@ class _LoginPageState extends State<LoginPage> {
       await _fetchNotebooks(token);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login Successfully'),
-            backgroundColor: Colors.green,),
-        );
+        showAnimatedSnackBar(
+            context, "Login Sucessfully", isSuccess: true, isTop: true);
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const BottomNavBar(currentIndex: 0,)),
+          MaterialPageRoute(
+              builder: (context) => const BottomNavBar(currentIndex: 0,)),
         );
       }
     } else {
-      print("Login failed: ${response.body}");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid credentials')),
-      );
+      showAnimatedSnackBar(
+          context, "Invalid credentials", isError: true, isTop: true);
     }
 
     setState(() {
@@ -107,7 +122,7 @@ class _LoginPageState extends State<LoginPage> {
         final List<dynamic> data = jsonResponse['results'];
 
         print("Notebooks fetched successfully!");
-        print("Notebook Data: ${jsonEncode(data)}");
+        //print("Notebook Data: ${jsonEncode(data)}");
 
         // Ensure items in 'data' are maps before conversion
         List<Notebook> notebooks = data
@@ -129,25 +144,46 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      // appBar: AppBar(title: const Text('Login')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
+            Padding(
+              padding: const EdgeInsets.only(left: 25.0),
+              child: Icon(Icons.login, size: 65, color: Theme
+                  .of(context)
+                  .colorScheme
+                  .primary),
+            ),
+            MyLabel(text: "Login", color: Theme
+                .of(context)
+                .colorScheme
+                .primary, size: 80, isTitle: true,),
+            MyTextField(
               controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Username'),
+              hintext: "Enter your Username",
+              obscuretext: false,
+              width: 80,
+              height: 20,
+              maxlines: 1,
+              prefixicon: Icon(Icons.person),
             ),
-            TextField(
+            MyTextField(
               controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
+              hintext: "Enter your password",
+              obscuretext: true,
+              width: 80,
+              height: 20,
+              maxlines: 1,
+              prefixicon: Icon(Icons.lock),
             ),
-            const SizedBox(height: 20),
             _isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(onPressed: _login, child: const Text('Login')),
+                ? Padding(padding: const EdgeInsets.all(8.0),
+                child: Center(child: const CircularProgressIndicator()))
+                : MyButton(onPressed: _login, text: "Login"),
           ],
         ),
       ),

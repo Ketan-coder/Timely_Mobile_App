@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
+import '../components/custom_snack_bar.dart';
 import '../models/notebook.dart';
 import 'login_screen.dart';
 import 'package:crypto/crypto.dart';
@@ -131,10 +132,14 @@ class _HomePageState extends State<HomePage> {
 
                     if (_checkPassword(inputPassword, realPasswordHash)) {
                       Navigator.of(context).pop(); // ✅ Close dialog
+                      showAnimatedSnackBar(
+                          context, "Correct Password", isSuccess: true,
+                          isTop: true);
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => NotebookDetailPage(notebookId: notebookID),
+                          builder: (context) =>
+                              NotebookDetailPage(notebookId: notebookID),
                         ),
                       );
                     } else {
@@ -142,6 +147,9 @@ class _HomePageState extends State<HomePage> {
                       setState(() {
                         isWrongPassword = true;
                       });
+                      showAnimatedSnackBar(
+                          context, "Wrong Password! Please Try Again.",
+                          isError: true, isTop: true);
                     }
                   },
                   child: const Text("Proceed", style: TextStyle(color: Colors.green)),
@@ -208,13 +216,25 @@ class _HomePageState extends State<HomePage> {
                       bottom: 20,
                       child: Opacity(
                         opacity: _titleOpacity,
-                        child: Text(
-                          "Notebooks",
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.tertiary ?? Colors.white,
-                            fontSize: 42,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            //Padding(
+                            //  padding: const EdgeInsets.only(left: 1.0),
+                            //  child: Icon(Icons.book,size: 40,color: Theme.of(context).colorScheme.primary),
+                            // ),
+                            Text(
+                              "Notebooks",
+                              style: TextStyle(
+                                color: Theme
+                                    .of(context)
+                                    .colorScheme
+                                    .tertiary ?? Colors.white,
+                                fontSize: 42,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

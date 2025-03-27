@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/profile_page.dart';
 import 'package:timely/screens/todo_page.dart';
 import '../screens/home_page.dart';
@@ -17,7 +18,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
 
   final List<Widget> _tabs = [
     const HomePage(),
-    const TodoPage(),
+    const AddNotebookPage(),
     const ProfilePage(),
   ];
 
@@ -46,11 +47,11 @@ class _BottomNavBarState extends State<BottomNavBar> {
         onTap: _onTabTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Add Notebook'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Favorites',
+            icon: Icon(Icons.settings),
+            label: 'Settings',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );
