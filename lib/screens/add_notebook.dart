@@ -1,4 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:timely/auth/auth_service.dart' as auth_service;
+import 'package:timely/components/bottom_nav_bar.dart';
+import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/components/labels.dart';
 import 'package:timely/components/text_field.dart';
 
@@ -17,6 +23,58 @@ class _AddNotebookPageState extends State<AddNotebookPage> {
   final TextEditingController _body = TextEditingController();
 
   // Todo-Add Notebook Logic with api calling
+  Future<void> _addNotebook() async {
+
+    if(_title.text.isEmpty){
+      showAnimatedSnackBar(context, "Title cannot be Empty", isError: true,isTop: true);
+      return;
+    } else if(_priority.text.isEmpty){
+      showAnimatedSnackBar(context, "Priority cannot be Empty", isError: true,isTop: true);
+      return;
+    } else if (_priority.text.isNotEmpty && int.tryParse(_priority.text) == null) {
+      showAnimatedSnackBar(context, "Priority must be a number", isError: true, isTop: true);
+      return;
+    } else if (_body.text.isEmpty){
+      showAnimatedSnackBar(context, "Body cannot be Empty", isError: true,isTop: true);
+      return;
+    } 
+
+    final token = await auth_service.AuthService.getToken();
+
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/');
+    final response = await http.post(
+      url,
+      headers: {
+        'Authorization': 'Token $token',
+      },
+      body: {
+        'title': _title.text,
+        'priority': _priority.text,
+        'body': _body.text
+      }
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 201) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        print(jsonResponse);
+        showAnimatedSnackBar(context, "Notebook Added Successfully", isSuccess: true,isTop: true);
+        Navigator.push(context,MaterialPageRoute(builder: (context) => BottomNavBar(currentIndex: 0),),);
+      } catch (e) {
+        print("Error parsing response: $e");
+        showAnimatedSnackBar(context, "Something Went Wrong!", isError: true,isTop: true);
+      }
+    } else {
+      print("Failed to fetch notebooks: ${response.body}");
+      showAnimatedSnackBar(context, "Something Went Wrong!", isError: true,isTop: true);
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +132,7 @@ class _AddNotebookPageState extends State<AddNotebookPage> {
                 height: 20,
                 maxlines: 10,
               ),
-              MyButton(onPressed: () {}, text: "Save"),
+              MyButton(onPressed: () => _addNotebook(), text: "Save"),
             ],
           ),
         ),

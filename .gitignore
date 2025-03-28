@@ -63,3 +63,5 @@ ios/Runner/GoogleService-Info.plist
 # FVM Version Cache
 .fvm/
 setup.md
+.fvmrc
+.vscode/

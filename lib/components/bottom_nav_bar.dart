@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/profile_page.dart';
-import 'package:timely/screens/todo_page.dart';
+//import 'package:timely/screens/todo_page.dart';
 import '../screens/home_page.dart';
 
 class BottomNavBar extends StatefulWidget {
