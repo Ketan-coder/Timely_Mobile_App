@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timely/models/todo.dart';
 
 import '../models/notebook.dart';
 import 'package:http/http.dart' as http;
@@ -88,6 +89,66 @@ class AuthService {
     }
   }
 
+  static Future<void> fetchTodos(String token) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/todos/');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return;
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Todos fetched successfully!");
+        print("Todos Data: ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<Todo> todos = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => Todo.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        // Store notebooks locally
+        await saveTodoLocally(todos);
+      } catch (e) {
+        print("Error parsing response: $e");
+      }
+    } else {
+      print("Failed to fetch todos: ${response.body}");
+    }
+  }
+
+  static Future<void> saveTodoLocally(List<Todo> todos) async {
+    final prefs = await SharedPreferences.getInstance();
+    String encodedData = Todo.encode(todos);
+    await prefs.setString('todos', encodedData);
+  }
+
+  static Future<List<Todo>> loadTodoFromLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? todoData = prefs.getString('todos');
+
+    if (todoData != null) {
+      return Todo.decode(todoData);
+    }
+    return [];
+  }
   // static Future<Map<String, dynamic>?> fetchNotebookDetails(String token, int notebookId) async {
   //   final url = Uri.parse(
   //     'https://timely.pythonanywhere.com/api/v1/notebooks/$notebookId/',

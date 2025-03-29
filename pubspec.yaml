@@ -40,6 +40,7 @@ dependencies:
   flutter_dotenv: ^5.2.1
   flutter_html: ^3.0.0
   url_launcher: ^6.3.1
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3
@@ -108,7 +109,7 @@ flutter:
           weight: 200
         - asset: fonts/Poppins-Light.ttf
           weight: 100
-        - asset: fonts/Poppins-regular.ttf
+        - asset: fonts/Poppins-Regular.ttf
           weight: 300
         - asset: fonts/Poppins-Medium.ttf
           weight: 400
@@ -116,10 +117,14 @@ flutter:
           weight: 500
         - asset: fonts/Poppins-Italic.ttf
           style: italic
+    - family: Sora
+      fonts:
+        - asset: fonts/Sora-VariableFont_wght.ttf
+          weight: 800 
   # fonts:
-  #   - family: Schyler
-  #     fonts:
-  #       - asset: fonts/Schyler-Regular.ttf
+    # - family: Sora
+    #   fonts:
+    #     - asset: fonts/Sora-VariableFont_wght.ttf
   #       - asset: fonts/Schyler-Italic.ttf
   #         style: italic
   #   - family: Trajan Pro

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_snack_bar.dart';
@@ -7,6 +8,7 @@ import '../models/notebook.dart';
 import 'login_screen.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -73,6 +75,16 @@ class _HomePageState extends State<HomePage> {
         context,
         MaterialPageRoute(builder: (context) => const LoginPage()),
       );
+    }
+  }
+
+  String _formatDateTime(String dateTimeString) {
+    try {
+      DateTime dateTime = DateTime.parse(dateTimeString);
+      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(dateTime);
+      return formattedDate;
+    } catch (e) {
+      return "Invalid date";
     }
   }
 
@@ -165,7 +177,37 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      floatingActionButton: IconButton(onPressed: () async { await _initializeData();}, icon: Icon(Icons.refresh)),
+      // floatingActionButton: IconButton(onPressed: () async { await _initializeData();}, icon: Icon(Icons.refresh)),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end, // Align buttons to the right
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right:8.0),
+            child: FloatingActionButton(
+              heroTag: 'Refresh Notebooks',
+              backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+              foregroundColor: Theme.of(context).colorScheme.surface,
+              tooltip: "Refresh Notebooks",
+              onPressed: () async { await _initializeData(); },
+              child: Icon(Icons.refresh),
+            ),
+          ),
+          SizedBox(width: 12), // Adds spacing between buttons
+          FloatingActionButton(
+            heroTag: 'Add Notebook Button',
+            tooltip: "Add Notebook",
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddNotebookPage(),
+                ),
+              );
+            },
+            child: Icon(Icons.add),
+          ),
+        ],
+      ),
       body: RefreshIndicator(
         onRefresh: () async {
           if (_token != null) {
@@ -229,9 +271,9 @@ class _HomePageState extends State<HomePage> {
                                 color: Theme
                                     .of(context)
                                     .colorScheme
-                                    .tertiary ?? Colors.white,
-                                fontSize: 42,
-                                fontWeight: FontWeight.bold,
+                                    .primary ?? Colors.white,
+                                fontSize: 48,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ],
@@ -257,8 +299,8 @@ class _HomePageState extends State<HomePage> {
                     bool isProtected = notebook['is_password_protected'] ?? false;
                     return ListTile(
                       textColor: Theme.of(context).colorScheme.surface,
-                      title: Text(notebook['title'] ?? 'Untitled'),
-                      subtitle: Text('Last updated: ${notebook['updated_at']}'),
+                      title: Text(notebook['title'] ?? 'Untitled',style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 18,fontWeight: FontWeight.w800,fontFamily: 'Sora'),),
+                      subtitle: Text('Last updated: ${_formatDateTime(notebook['updated_at'])}'),
                       trailing: isProtected
                           ? const Icon(Icons.lock, color: Colors.red)
                           : const SizedBox(),
