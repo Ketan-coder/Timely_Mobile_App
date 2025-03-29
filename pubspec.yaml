@@ -120,8 +120,20 @@ flutter:
     - family: Sora
       fonts:
         - asset: fonts/Sora-VariableFont_wght.ttf
-          weight: 800 
-  # fonts:
+          weight: 900
+        - asset: fonts/Sora-VariableFont_wght.ttf
+          weight: 800
+        - asset: fonts/Sora-VariableFont_wght.ttf
+          weight: 700
+        - asset: fonts/Sora-VariableFont_wght.ttf
+          weight: 300
+        - asset: fonts/Sora-VariableFont_wght.ttf
+          weight: 100
+        - asset: fonts/Sora-VariableFont_wght.ttf
+          weight: 500
+        - asset: fonts/Sora-VariableFont_wght.ttf
+          weight: 600
+    # fonts:
     # - family: Sora
     #   fonts:
     #     - asset: fonts/Sora-VariableFont_wght.ttf

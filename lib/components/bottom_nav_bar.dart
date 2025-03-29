@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/profile_page.dart';
+import 'package:timely/screens/reminders_page.dart';
 import 'package:timely/screens/todo_page.dart';
 //import 'package:timely/screens/todo_page.dart';
 import '../screens/home_page.dart';
+import '../screens/shared_and_public_page.dart';
 
 class BottomNavBar extends StatefulWidget {
   final int currentIndex;
@@ -20,8 +22,8 @@ class _BottomNavBarState extends State<BottomNavBar> {
   final List<Widget> _tabs = [
     const HomePage(),
     const TodoPage(),
-    const ProfilePage(),
-    const ProfilePage(),
+    const RemindersPage(),
+    const SharedAndPublicPage(),
     const ProfilePage(),
   ];
 

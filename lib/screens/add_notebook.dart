@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:timely/auth/auth_service.dart' as auth_service;
@@ -28,16 +27,27 @@ class _AddNotebookPageState extends State<AddNotebookPage> {
     if(_title.text.isEmpty){
       showAnimatedSnackBar(context, "Title cannot be Empty", isError: true,isTop: true);
       return;
-    } else if(_priority.text.isEmpty){
-      showAnimatedSnackBar(context, "Priority cannot be Empty", isError: true,isTop: true);
+    } else if (_priority.text.isEmpty) {
+      showAnimatedSnackBar(
+          context, "Priority cannot be Empty", isError: true, isTop: true);
       return;
-    } else if (_priority.text.isNotEmpty && int.tryParse(_priority.text) == null) {
-      showAnimatedSnackBar(context, "Priority must be a number", isError: true, isTop: true);
+    } else if (_priority.text.isNotEmpty &&
+        int.tryParse(_priority.text) == null) {
+      showAnimatedSnackBar(
+          context, "Priority must be a number", isError: true, isTop: true);
       return;
-    } else if (_body.text.isEmpty){
-      showAnimatedSnackBar(context, "Body cannot be Empty", isError: true,isTop: true);
+    } else if (_priority.text.isNotEmpty &&
+        (int.tryParse(_priority.text)! > 5 ||
+            int.tryParse(_priority.text)! < 0)) {
+      showAnimatedSnackBar(
+          context, "Priority must be between 1 to 5, not more neither less!",
+          isError: true, isTop: true);
       return;
-    } 
+    } else if (_body.text.isEmpty) {
+      showAnimatedSnackBar(
+          context, "Body cannot be Empty", isError: true, isTop: true);
+      return;
+    }
 
     final token = await auth_service.AuthService.getToken();
 
@@ -58,15 +68,20 @@ class _AddNotebookPageState extends State<AddNotebookPage> {
     print("Raw API Response: ${response.body}"); // Debugging
 
     if (response.statusCode == 201) {
+      FocusScope.of(context).unfocus();
       try {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
 
         print(jsonResponse);
-        showAnimatedSnackBar(context, "Notebook Added Successfully", isSuccess: true,isTop: true);
-        Navigator.push(context,MaterialPageRoute(builder: (context) => BottomNavBar(currentIndex: 0),),);
+        showAnimatedSnackBar(
+            context, "Notebook Added Successfully", isSuccess: true,
+            isTop: true);
+        Navigator.push(context, MaterialPageRoute(
+          builder: (context) => BottomNavBar(currentIndex: 0),),);
       } catch (e) {
         print("Error parsing response: $e");
-        showAnimatedSnackBar(context, "Something Went Wrong!", isError: true,isTop: true);
+        showAnimatedSnackBar(
+            context, "Something Went Wrong!", isError: true, isTop: true);
       }
     } else {
       print("Failed to fetch notebooks: ${response.body}");

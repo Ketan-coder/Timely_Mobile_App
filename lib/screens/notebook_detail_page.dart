@@ -9,6 +9,7 @@ import '../auth/auth_service.dart' as auth_service;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../components/bottom_nav_bar.dart';
+import 'package:intl/intl.dart';
 
 class NotebookDetailPage extends StatefulWidget {
   final int notebookId;
@@ -363,7 +364,16 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     }
   }
 
-
+  String _formatDateTime(String dateTimeString) {
+    try {
+      DateTime dateTime = DateTime.parse(dateTimeString);
+      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
+          dateTime);
+      return formattedDate;
+    } catch (e) {
+      return "Invalid date";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -371,8 +381,13 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: widget.isPasswordProtected ? Text("LOCKED NOTEBOOK") : Text(""),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        foregroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme
+            .of(context)
+            .scaffoldBackgroundColor,
+        foregroundColor: Theme
+            .of(context)
+            .colorScheme
+            .primary,
       ),
       persistentFooterButtons: [
         Row(
@@ -471,9 +486,23 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                   children: [
                     Text(
                       _notebookData?['title'] ?? 'Untitled',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
+                        fontFamily: 'Sora',
+                        color: Theme
+                            .of(context)
+                            .colorScheme
+                            .tertiary,
+                      ),
+                    ),
+                    Text(
+                      "Last Updated: ${_formatDateTime(
+                          _notebookData?['updated_at'])}",
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Sora',
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -482,6 +511,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                     Expanded(
                       child: SingleChildScrollView(
                         child: Html(
+                          //doNotRenderTheseTags: {'iframe','form'},
                           data:
                               _notebookData?['body'] ??
                               "<p>No content available</p>",

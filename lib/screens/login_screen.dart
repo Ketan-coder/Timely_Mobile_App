@@ -55,6 +55,7 @@ class _LoginPageState extends State<LoginPage> {
     );
 
     if (response.statusCode == 200) {
+      FocusScope.of(context).unfocus();
       final Map<String, dynamic> data = jsonDecode(response.body);
 
       final String? token = data['token'];

@@ -229,12 +229,15 @@ class _HomePageState extends State<HomePage> {
                 expandedHeight: 250.0,
                 floating: false,
                 pinned: true,
-                toolbarHeight: 60.0,
+                toolbarHeight: 80.0,
                 actions: [
                   IconButton(
                     onPressed: () => _logout(context),
                     icon: const Icon(Icons.logout),
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Theme
+                        .of(context)
+                        .colorScheme
+                        .primary,
                   ),
                 ],
                 flexibleSpace: Stack(
@@ -298,14 +301,31 @@ class _HomePageState extends State<HomePage> {
                     final notebook = _notebooks[index];
                     bool isProtected = notebook['is_password_protected'] ?? false;
                     return ListTile(
-                      textColor: Theme.of(context).colorScheme.surface,
-                      title: Text(notebook['title'] ?? 'Untitled',style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 18,fontWeight: FontWeight.w800,fontFamily: 'Sora'),),
-                      subtitle: Text('Last updated: ${_formatDateTime(notebook['updated_at'])}'),
+                      textColor: Theme
+                          .of(context)
+                          .colorScheme
+                          .surface,
+                      title: Text(notebook['title'] ?? 'Untitled',
+                        style: TextStyle(color: Theme
+                            .of(context)
+                            .colorScheme
+                            .primary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Sora'),),
+                      subtitle: Text(
+                          '${_formatDateTime(notebook['updated_at'])}'),
+                      leading: Icon(Icons.book, color: Theme
+                          .of(context)
+                          .colorScheme
+                          .tertiary,),
                       trailing: isProtected
                           ? const Icon(Icons.lock, color: Colors.red)
                           : const SizedBox(),
                       onTap: () async {
-                        await _showPasswordInputDialog(context,notebook['id'],notebook['title'],notebook['password'].toString(),isProtected);
+                        await _showPasswordInputDialog(
+                            context, notebook['id'], notebook['title'],
+                            notebook['password'].toString(), isProtected);
                         // Navigator.push(
                         //   context,
                         //   MaterialPageRoute(
