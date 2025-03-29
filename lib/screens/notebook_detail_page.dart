@@ -7,7 +7,7 @@ import 'package:timely/screens/page_detail_page.dart';
 import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
 import 'package:flutter_html/flutter_html.dart';
-
+import 'package:url_launcher/url_launcher.dart';
 import '../components/bottom_nav_bar.dart';
 
 class NotebookDetailPage extends StatefulWidget {
@@ -354,6 +354,16 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
   );
 }
 
+  void _launchUrl(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      print("Could not launch $url");
+    }
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -475,6 +485,11 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                           data:
                               _notebookData?['body'] ??
                               "<p>No content available</p>",
+                          onAnchorTap: (url, context, attributes) {
+                            if (url != null) {
+                              _launchUrl(url);
+                            }
+                          },
                         ),
                       ),
                     ),
