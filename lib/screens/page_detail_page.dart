@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/bottom_nav_bar.dart';
 
@@ -135,16 +136,31 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
         ),
       );
     }
+    }
+
+  String _formatDateTime(String dateTimeString) {
+    try {
+      DateTime dateTime = DateTime.parse(dateTimeString);
+      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
+          dateTime);
+      return formattedDate;
+    } catch (e) {
+      return "Invalid date";
+    }
   }
 
-  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: _isLoading ? Text("") : Text("${_pageData?['title']}"),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        foregroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme
+            .of(context)
+            .scaffoldBackgroundColor,
+        foregroundColor: Theme
+            .of(context)
+            .colorScheme
+            .primary,
       ),
       persistentFooterButtons: [
         Row(
@@ -221,6 +237,15 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    Text(
+                      "Last Updated: ${_formatDateTime(
+                          _pageData?['updated_at'])}",
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Sora',
+                      ),
+                    ),
                     const SizedBox(height: 10),
                     const Divider(),
                     const SizedBox(height: 10),
@@ -228,7 +253,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                       child: SingleChildScrollView(
                         child: Html(
                           data:
-                              _pageData?['body'] ??
+                          _pageData?['body'] ??
                               "<p>No content available</p>",
                         ),
                       ),

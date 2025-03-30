@@ -6,6 +6,8 @@ import 'package:timely/models/todo.dart';
 import '../models/notebook.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/reminder.dart';
+
 class AuthService {
   static Future<void> saveToken(String token) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -149,6 +151,68 @@ class AuthService {
     }
     return [];
   }
+
+  static Future<void> fetchReminders(String token) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/remainders/');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return;
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Todos fetched successfully!");
+        print("Todos Data: ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<Reminder> reminders = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => Reminder.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        // Store notebooks locally
+        await saveRemindersLocally(reminders);
+      } catch (e) {
+        print("Error parsing response: $e");
+      }
+    } else {
+      print("Failed to fetch todos: ${response.body}");
+    }
+  }
+
+  static Future<void> saveRemindersLocally(List<Reminder> reminders) async {
+    final prefs = await SharedPreferences.getInstance();
+    String encodedData = Reminder.encode(reminders);
+    await prefs.setString('reminders', encodedData);
+  }
+
+  static Future<List<Reminder>> loadRemindersFromLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? reminderData = prefs.getString('reminders');
+
+    if (reminderData != null) {
+      return Reminder.decode(reminderData);
+    }
+    return [];
+  }
+
   // static Future<Map<String, dynamic>?> fetchNotebookDetails(String token, int notebookId) async {
   //   final url = Uri.parse(
   //     'https://timely.pythonanywhere.com/api/v1/notebooks/$notebookId/',

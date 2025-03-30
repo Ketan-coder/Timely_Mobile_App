@@ -177,18 +177,30 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .inverseSurface,
       // floatingActionButton: IconButton(onPressed: () async { await _initializeData();}, icon: Icon(Icons.refresh)),
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end, // Align buttons to the right
         children: [
           Padding(
-            padding: const EdgeInsets.only(right:8.0),
+            padding: const EdgeInsets.only(right: 8.0),
             child: FloatingActionButton(
               heroTag: 'Refresh Notebooks',
-              backgroundColor: Theme.of(context).colorScheme.inverseSurface,
-              foregroundColor: Theme.of(context).colorScheme.surface,
+              backgroundColor: Theme
+                  .of(context)
+                  .colorScheme
+                  .inverseSurface,
+              foregroundColor: Theme
+                  .of(context)
+                  .colorScheme
+                  .surface,
               tooltip: "Refresh Notebooks",
-              onPressed: () async { await _initializeData(); },
+              onPressed: () async {
+                await _initializeData();
+              },
               child: Icon(Icons.refresh),
             ),
           ),

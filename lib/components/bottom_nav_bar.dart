@@ -36,14 +36,28 @@ class _BottomNavBarState extends State<BottomNavBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .inverseSurface,
       body: _tabs[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Theme
+            .of(context)
+            .colorScheme
+            .inverseSurface,
         currentIndex: _currentIndex,
-        selectedItemColor: Theme.of(context).colorScheme.tertiary,
+        selectedItemColor: Theme
+            .of(context)
+            .colorScheme
+            .tertiary,
         selectedFontSize: 15,
         // unselectedFontSize: 20,
         selectedIconTheme: IconThemeData(
-          color: Theme.of(context).colorScheme.tertiary,
+          color: Theme
+              .of(context)
+              .colorScheme
+              .tertiary,
           size: 32,
         ),
         unselectedItemColor: Colors.grey.shade600,
