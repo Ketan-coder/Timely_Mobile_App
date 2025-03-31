@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../auth/auth_service.dart' as auth_service;
+import '../components/custom_page_animation.dart';
 import '../models/notebook.dart';
 import 'login_screen.dart';
 import 'notebook_detail_page.dart';
@@ -126,7 +127,7 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
         ],
       ),
       floatingActionButton: IconButton(
-        onPressed: () {},
+        onPressed: () => _initializeData(),
         icon: Icon(Icons.refresh),
       ),
       bottomNavigationBar: Container(
@@ -311,16 +312,9 @@ class _SharedTabState extends State<SharedTab> {
                       //await _showPasswordInputDialog(
                       //    context, notebook['id'], notebook['title'],
                       //    notebook['password'].toString(), isProtected);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              NotebookDetailPage(
-                                notebookId: notebook['id'],
-                                isPasswordProtected: isProtected,
-                              ),
-                        ),
-                      );
+                      Navigator.of(context).push(createRoute(NotebookDetailPage(
+                          notebookId: notebook['id'],
+                          isPasswordProtected: isProtected)));
                     },
                   );
                 },

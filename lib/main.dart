@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/components/bottom_nav_bar.dart';
+import 'components/custom_page_animation.dart';
 import 'screens/login_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
@@ -32,6 +33,26 @@ class _MyAppState extends State<MyApp> {
       _isAuthenticated = prefs.getString('auth_token') != null;
     });
   }
+
+  // Custom transition (left-to-right, slow like iOS)
+  Route createRoute(Widget secondScreen) {
+    return PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 600), // Slow transition
+      pageBuilder: (context, animation, secondaryAnimation) => secondScreen,
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const begin = Offset(-1.0, 0.0); // Start from the left
+        const end = Offset.zero; // End at the center
+        const curve = Curves.easeInOut; // Smooth slow effect
+
+        var tween = Tween(begin: begin, end: end).chain(
+            CurveTween(curve: curve));
+        var offsetAnimation = animation.drive(tween);
+
+        return SlideTransition(position: offsetAnimation, child: child);
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {

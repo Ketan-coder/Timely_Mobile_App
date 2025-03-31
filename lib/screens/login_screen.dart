@@ -3,9 +3,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:timely/components/button.dart';
 import 'package:timely/components/labels.dart';
+import 'package:timely/screens/sign_up_screen.dart';
 import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
 import '../components/bottom_nav_bar.dart';
+import '../components/custom_page_animation.dart';
 import '../components/custom_snack_bar.dart';
 import '../components/text_field.dart';
 import '../models/notebook.dart';
@@ -186,6 +188,17 @@ class _LoginPageState extends State<LoginPage> {
                 ? Padding(padding: const EdgeInsets.all(8.0),
                 child: Center(child: const CircularProgressIndicator()))
                 : MyButton(onPressed: _login, text: "Login"),
+            GestureDetector(onTap: () {
+              Navigator.of(context).push(createRoute(const SignUpScreen()),
+              );
+            },
+              child: Container(margin: EdgeInsets.only(left: 120),
+                  child: MyLabel(text: "Don't have account? Sign Up",
+                      size: 15,
+                      color: Theme
+                          .of(context)
+                          .colorScheme
+                          .primary)),)
           ],
         ),
       ),

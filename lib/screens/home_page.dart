@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
+import '../components/custom_page_animation.dart';
 import '../components/custom_snack_bar.dart';
 import '../models/notebook.dart';
 import 'login_screen.dart';
@@ -99,10 +100,12 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _showPasswordInputDialog(BuildContext context, int notebookID, String notebookName, String realPasswordHash, bool isPasswordProtected) async {
     if (!isPasswordProtected) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => NotebookDetailPage(notebookId: notebookID)),
-      );
+      //Navigator.push(
+      //  context,
+      //  MaterialPageRoute(builder: (context) => NotebookDetailPage(notebookId: notebookID)),
+      //);
+      Navigator.of(context).push(createRoute(NotebookDetailPage(
+          notebookId: notebookID, isPasswordProtected: isPasswordProtected)));
       return; // Stop execution, no need to show password dialog
     }
 
