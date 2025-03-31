@@ -91,6 +91,132 @@ class AuthService {
     }
   }
 
+  static Future<void> fetchSharedNotebooks(String token) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/').replace(
+        queryParameters: {'shared_with_me': 'True'});
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return;
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Notebooks fetched successfully!");
+        print("Notebook Data: ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<Notebook> notebooks = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        // Store notebooks locally
+        await saveSharedNotebooksLocally(notebooks);
+      } catch (e) {
+        print("Error parsing response: $e");
+      }
+    } else {
+      print("Failed to fetch notebooks: ${response.body}");
+    }
+  }
+
+  static Future<void> saveSharedNotebooksLocally(
+      List<Notebook> notebooks) async {
+    final prefs = await SharedPreferences.getInstance();
+    String encodedData = Notebook.encode(notebooks);
+    await prefs.setString('shared_notebooks', encodedData);
+  }
+
+  static Future<List<Notebook>> loadSharedNotebooksFromLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? notebookData = prefs.getString('shared_notebooks');
+
+    if (notebookData != null) {
+      return Notebook.decode(notebookData);
+    }
+    return [];
+  }
+
+  static Future<void> fetchPublicNotebooks(String token) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/').replace(
+        queryParameters: {'is_public': 'True'});
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return;
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Notebooks fetched successfully!");
+        print("Notebook Data: ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<Notebook> notebooks = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        // Store notebooks locally
+        await savePublicNotebooksLocally(notebooks);
+      } catch (e) {
+        print("Error parsing response: $e");
+      }
+    } else {
+      print("Failed to fetch notebooks: ${response.body}");
+    }
+  }
+
+  static Future<void> savePublicNotebooksLocally(
+      List<Notebook> notebooks) async {
+    final prefs = await SharedPreferences.getInstance();
+    String encodedData = Notebook.encode(notebooks);
+    await prefs.setString('public_notebooks', encodedData);
+  }
+
+  static Future<List<Notebook>> loadPublicNotebooksFromLocal() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? notebookData = prefs.getString('public_notebooks');
+
+    if (notebookData != null) {
+      return Notebook.decode(notebookData);
+    }
+    return [];
+  }
+
   static Future<void> fetchTodos(String token) async {
     final url = Uri.parse(
         'https://timely.pythonanywhere.com/api/v1/todos/');
