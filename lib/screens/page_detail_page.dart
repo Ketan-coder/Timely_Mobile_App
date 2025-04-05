@@ -1,9 +1,11 @@
 import 'dart:convert';
-
+import 'package:timely/screens/subpage_detail_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/bottom_nav_bar.dart';
 
@@ -42,7 +44,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
     }
   }
 
-   Future<void> _fetchPageDetails() async {
+    Future<void> _fetchPageDetails() async {
     final url = Uri.parse(
       'https://timely.pythonanywhere.com/api/v1/pages/${widget.pageUuid}/',
     );
@@ -138,7 +140,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
     }
     }
 
-  String _formatDateTime(String dateTimeString) {
+    String _formatDateTime(String dateTimeString) {
     try {
       DateTime dateTime = DateTime.parse(dateTimeString);
       String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
@@ -146,6 +148,202 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
       return formattedDate;
     } catch (e) {
       return "Invalid date";
+    }
+  }
+
+    Future<List<Map<String, dynamic>>> _fetchPagesDetailsForSubpages({bool forceRefresh = false}) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // final String? cachedData = prefs.getString('notebook_${widget.notebookId}');
+
+    // // Return cached data if available
+    // if (cachedData != null) {
+    //   return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
+    // }
+    if (!forceRefresh) {
+      final String? cachedData = prefs.getString('page_${widget.pageUuid}');
+      if (cachedData != null) {
+        return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
+      }
+    }
+    final url = Uri.parse(
+      'https://timely.pythonanywhere.com/api/v1/pages/${widget.pageUuid}/',
+    );
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $_token', // Replace with actual token
+      },
+    );
+
+    if (response.statusCode == 200) {
+      setState(() {
+        _pageData = jsonDecode(response.body);
+        print(_pageData);
+        _isLoading = false;
+      });
+
+      final Map<String, dynamic> pageData = jsonDecode(response.body);
+      // final List<String> pageUuids = List<String>.from(notebookData['pages'] ?? []);
+      final List<String> subpageUuids = List<String>.from(pageData['subpages'] ?? []);
+
+      if (subpageUuids.isEmpty) {
+        return []; // No pages found
+      }
+
+      // Fetch pages in parallel instead of sequentially
+      final List<Map<String, dynamic>?> pages = await Future.wait(
+        subpageUuids.map((uuid) => auth_service.AuthService.fetchSubPageDetails(uuid, _token)),
+      );
+
+      // Remove null results (failed fetches)
+      final List<Map<String, dynamic>> validPages =
+          pages.where((page) => page != null).cast<Map<String, dynamic>>().toList();
+
+      // Cache the fetched pages
+      await auth_service.AuthService.savePagesLocally(pageData['id'], validPages);
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('page_${widget.pageUuid}', jsonEncode(validPages));
+
+      return validPages;
+    } else {
+      setState(() {
+        _errorMessage = "Failed to load notebook.";
+        _isLoading = false;
+      });
+      return [];
+    }
+  }
+
+  Future<void> showPageBottomSheet(BuildContext context) async {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent, // Keeps background visible
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          Future<List<Map<String, dynamic>>> _pageFuture = _fetchPagesDetailsForSubpages();
+
+          Future<void> refreshPages() async {
+            setState(() {
+              _pageFuture = _fetchPagesDetailsForSubpages(forceRefresh: true);
+            });
+          }
+
+          return FractionallySizedBox(
+            heightFactor: 0.45, // Covers 1/4th of the screen initially
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.inverseSurface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: Column(
+                children: [
+                  // Handle for Dragging
+                  Container(
+                    width: 40,
+                    height: 5,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  // Header with Refresh Button
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "Sub Pages",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.refresh),
+                          onPressed: refreshPages, // Refresh button
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: _pageFuture,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        } else if (snapshot.hasError) {
+                          return Center(child: Text("Error: ${snapshot.error}"));
+                        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return Center(
+                            child: Text(
+                              "No Pages Found!",
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontSize: 20,
+                              ),
+                            ),
+                          );
+                        } else {
+                          final pages = snapshot.data!;
+                          return ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: pages.length,
+                            itemBuilder: (context, index) {
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(context,MaterialPageRoute(builder: (context) => SubPageDetailsPage(subpageUuid: pages[index]['subpage_uuid'],),),);
+                                },
+                                child: ListTile(
+                                  leading: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.tertiary,
+                                      borderRadius: BorderRadius.circular(8.0),
+                                      border: Border.all(
+                                        color: Theme.of(context).colorScheme.tertiary,
+                                        width: 5.0,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      "${index + 1}",
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.surface,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ),
+                                  title: Text(
+                                    pages[index]['title'] ?? "Untitled Page",
+                                    style: TextStyle(color: Theme.of(context).colorScheme.surface),
+                                  ),
+                                  trailing: const Icon(Icons.arrow_forward_ios_rounded),
+                                ),
+                              );
+                            },
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+  void _launchUrl(String url) async {
+    final Uri uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      print("Could not launch $url");
     }
   }
 
@@ -214,7 +412,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
       ],
       floatingActionButton: FloatingActionButton(
         //check if the note is favorite or not and change the icon as needed
-        onPressed: () {},
+        onPressed: () => showPageBottomSheet(context),
         //check if the note is favorite or not and change the icon as needed
         child: const Icon(Icons.description_outlined, color: Colors.deepPurple),
       ),
@@ -255,6 +453,11 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                           data:
                           _pageData?['body'] ??
                               "<p>No content available</p>",
+                          onAnchorTap: (url, context, attributes) {
+                            if (url != null) {
+                              _launchUrl(url);
+                            }
+                          },
                         ),
                       ),
                     ),

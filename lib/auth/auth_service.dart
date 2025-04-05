@@ -373,6 +373,19 @@ class AuthService {
     return null;
   }
 
+  static Future<Map<String, dynamic>?> fetchSubPageDetails(String uuid, String token) async {
+    final url = Uri.parse('https://timely.pythonanywhere.com/api/v1/subpages/$uuid/');
+    final response = await http.get(
+      url,
+      headers: {'Content-Type': 'application/json', 'Authorization': 'Token $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return null;
+  }
+
   static Future<void> savePagesLocally(int notebookId, List<Map<String, dynamic>> pages) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('notebook_$notebookId', jsonEncode(pages));
