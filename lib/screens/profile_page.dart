@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../auth/user_details_service.dart';
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -10,6 +12,22 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   bool _isRefreshing = false;
   String? _token; // Store token
+
+  Map<String, dynamic> _userDetails = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserDetails();
+  }
+
+  Future<void> _loadUserDetails() async {
+    final details = await UserStorageHelper.getUserDetails();
+    setState(() {
+      _userDetails = details!;
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +102,61 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
+            SliverList(
+              delegate: SliverChildListDelegate([
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Name:',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Sora',
+                              color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${_userDetails['first_name']} ${_userDetails['last_name']}' ??
+                                '',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Sora',
+                              color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Email: ${_userDetails['email']}' ?? '',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Sora',
+                          color: Theme
+                              .of(context)
+                              .colorScheme
+                              .primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ]),
+            )
+
           ],
         ),
       ),

@@ -6,6 +6,7 @@ import 'package:timely/components/labels.dart';
 import 'package:timely/screens/sign_up_screen.dart';
 import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
+import '../auth/user_details_service.dart';
 import '../components/bottom_nav_bar.dart';
 import '../components/custom_page_animation.dart';
 import '../components/custom_snack_bar.dart';
@@ -63,8 +64,12 @@ class _LoginPageState extends State<LoginPage> {
       final String? token = data['token'];
       final int? userId = data['user_id'];
       final String? username = data['username'];
+      final String? email = data['email'];
+      final String? firstName = data['first_name'];
+      final String? lastName = data['last_name'];
 
-      if (token == null || userId == null || username == null) {
+      if (token == null || userId == null || username == null ||
+          email == null || firstName == null || lastName == null) {
         throw Exception(
             "Invalid response from server. Missing required fields.");
       }
@@ -75,6 +80,12 @@ class _LoginPageState extends State<LoginPage> {
 
       await auth_service.AuthService.saveToken(token);
       await auth_service.AuthService.saveUserDetails(userId, username);
+
+      await UserStorageHelper.saveUserDetailsAll(userId: userId,
+          username: username,
+          email: email,
+          firstName: firstName,
+          lastName: lastName);
 
       // Fetch notebooks
       await _fetchNotebooks(token);

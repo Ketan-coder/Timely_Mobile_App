@@ -65,19 +65,18 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       body: jsonEncode({'is_favourite': !IsFavourite}),
     );
     if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Marked Favourite'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      IsFavourite ? showAnimatedSnackBar(
+          context, "Unhearted", isSuccess: true,
+          isTop: true) : showAnimatedSnackBar(
+          context, "Marked Favourite", isSuccess: true,
+          isTop: true);
+      setState(() {
+        IsFavourite = !IsFavourite;
+      });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Something went wrong!'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      showAnimatedSnackBar(
+          context, "Something Went Wrong", isError: true,
+          isTop: true);
     }
   }
 
@@ -124,8 +123,16 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
         print(_notebookData);
         _isLoading = false;
       });
-
-    } else {
+    } else if (response.statusCode == 404) {
+      setState(() {
+        _errorMessage = "404 - No Notebook Found!";
+        _isLoading = false;
+      });
+      showAnimatedSnackBar(
+          context, "404 - No Notebook Found!", isError: true,
+          isTop: true);
+    }
+    else {
       setState(() {
         _errorMessage = "Failed to load notebook.";
         _isLoading = false;
