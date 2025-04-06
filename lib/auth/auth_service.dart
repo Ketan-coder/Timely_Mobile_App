@@ -339,32 +339,38 @@ class AuthService {
     return [];
   }
 
-  // static Future<Map<String, dynamic>?> fetchNotebookDetails(String token, int notebookId) async {
-  //   final url = Uri.parse(
-  //     'https://timely.pythonanywhere.com/api/v1/notebooks/$notebookId/',
-  //   );
-  //   final response = await http.get(
-  //     url,
-  //     headers: {
-  //       'Content-Type': 'application/json',
-  //       'Authorization': 'Token $token', // Replace with actual token
-  //     },
-  //   );
-  //
-  //   if (response.statusCode == 200) {
-  //     Map<String, dynamic>? notebookData = jsonDecode(response.body);
-  //     return notebookData;
-  //   } else {
-  //     Map<String, dynamic>? notebookData = [] as Map<String, dynamic>?;
-  //     return notebookData;
-  //   }
-  // }
-
-  static Future<Map<String, dynamic>?> fetchPageDetails(String uuid, String token) async {
-    final url = Uri.parse('https://timely.pythonanywhere.com/api/v1/pages/$uuid/');
+  static Future<Map<String, dynamic>?> fetchNotebookDetails(String token,
+      int notebookId) async {
+    final url = Uri.parse(
+      'https://timely.pythonanywhere.com/api/v1/notebooks/$notebookId/',
+    );
     final response = await http.get(
       url,
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Token $token'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token', // Replace with actual token
+      },
+    );
+
+    if (response.statusCode == 200) {
+      Map<String, dynamic>? notebookData = jsonDecode(response.body);
+      return notebookData;
+    } else {
+      Map<String, dynamic>? notebookData = [] as Map<String, dynamic>?;
+      return notebookData;
+    }
+  }
+
+  static Future<Map<String, dynamic>?> fetchPageDetails(String uuid,
+      String token) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/pages/$uuid/');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token'
+      },
     );
 
     if (response.statusCode == 200) {
@@ -377,7 +383,10 @@ class AuthService {
     final url = Uri.parse('https://timely.pythonanywhere.com/api/v1/subpages/$uuid/');
     final response = await http.get(
       url,
-      headers: {'Content-Type': 'application/json', 'Authorization': 'Token $token'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token'
+      },
     );
 
     if (response.statusCode == 200) {
@@ -386,14 +395,31 @@ class AuthService {
     return null;
   }
 
-  static Future<void> savePagesLocally(int notebookId, List<Map<String, dynamic>> pages) async {
+  static Future<void> savePagesLocally(int notebookId,
+      List<Map<String, dynamic>> pages) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('notebook_$notebookId', jsonEncode(pages));
   }
 
-  static Future<List<Map<String, dynamic>>> getSavedPages(int notebookId) async {
+  static Future<List<Map<String, dynamic>>> getSavedPages(
+      int notebookId) async {
     final prefs = await SharedPreferences.getInstance();
     final String? savedData = prefs.getString('notebook_$notebookId');
-    return savedData != null ? List<Map<String, dynamic>>.from(jsonDecode(savedData)) : [];
+    return savedData != null ? List<Map<String, dynamic>>.from(
+        jsonDecode(savedData)) : [];
+  }
+
+  static Future<void> saveSubPagesLocally(int notebookId,
+      List<Map<String, dynamic>> pages) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('notebook_subpages_$notebookId', jsonEncode(pages));
+  }
+
+  static Future<List<Map<String, dynamic>>> getSavedSubPages(
+      int notebookId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? savedData = prefs.getString('notebook_subpages_$notebookId');
+    return savedData != null ? List<Map<String, dynamic>>.from(
+        jsonDecode(savedData)) : [];
   }
 }

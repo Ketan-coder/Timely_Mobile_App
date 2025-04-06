@@ -6,6 +6,7 @@ import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_snack_bar.dart';
 import '../models/reminder.dart';
 import 'login_screen.dart';
+import 'package:timely/services/notification_service.dart';
 
 class RemindersPage extends StatefulWidget {
   const RemindersPage({super.key});
@@ -143,6 +144,12 @@ class _RemindersPageState extends State<RemindersPage> {
         "$reminderName Added Successfully",
         isSuccess: true,
         isTop: true,
+      );
+      await NotificationService.scheduleNotification(
+        id: 1,
+        title: 'Study Reminder',
+        body: 'Start revising Operating Systems 🧠',
+        scheduledDate: DateTime.now().add(Duration(seconds: 2)),
       );
     } else {
       showAnimatedSnackBar(

@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:http/http.dart' as http;
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/bottom_nav_bar.dart';
+import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/components/labels.dart';
-import 'package:timely/components/text_field.dart';
-
-import '../components/button.dart';
 
 class AddNotebookPage extends StatefulWidget {
-  const AddNotebookPage({super.key});
+  final int? notebookId;
+
+  AddNotebookPage({super.key, this.notebookId});
 
   @override
   State<AddNotebookPage> createState() => _AddNotebookPageState();
@@ -21,18 +22,39 @@ class _AddNotebookPageState extends State<AddNotebookPage> {
   final TextEditingController _priority = TextEditingController();
   final TextEditingController _body = TextEditingController();
 
-  // Todo-Add Notebook Logic with api calling
-  Future<void> _addNotebook() async {
+  @override
+  void initState() {
+    if (widget.notebookId != null) {
+      _fetchNotebookDetails(widget.notebookId!);
+    }
+    super.initState();
+  }
 
-    if(_title.text.isEmpty){
-      showAnimatedSnackBar(context, "Title cannot be Empty", isError: true,isTop: true);
+
+  Future <void> _fetchNotebookDetails(int notebookId) async {
+    final token = await auth_service.AuthService.getToken();
+    final response = await auth_service.AuthService.fetchNotebookDetails(
+        token!, notebookId);
+    print("Response=>>");
+    print(response);
+    setState(() {
+      _title.text = response?['title'];
+      _priority.text = response!['priority'].toString();
+      _body.text = response['body'];
+    });
+  }
+
+  Future<void> _addNotebook({String? notebookId}) async {
+    if (_title.text.isEmpty) {
+      showAnimatedSnackBar(
+          context, "Title cannot be Empty", isError: true, isTop: true);
       return;
     } else if (_priority.text.isEmpty) {
       showAnimatedSnackBar(
           context, "Priority cannot be Empty", isError: true, isTop: true);
       return;
-    } else if (_priority.text.isNotEmpty &&
-        int.tryParse(_priority.text) == null) {
+    } else
+    if (_priority.text.isNotEmpty && int.tryParse(_priority.text) == null) {
       showAnimatedSnackBar(
           context, "Priority must be a number", isError: true, isTop: true);
       return;
@@ -51,9 +73,21 @@ class _AddNotebookPageState extends State<AddNotebookPage> {
 
     final token = await auth_service.AuthService.getToken();
 
-    final url = Uri.parse(
-        'https://timely.pythonanywhere.com/api/v1/notebooks/');
-    final response = await http.post(
+
+    final url = notebookId != null ? Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/$notebookId/') : Uri
+        .parse('https://timely.pythonanywhere.com/api/v1/notebooks/');
+    final response = notebookId != null ? await http.patch(
+      url,
+      headers: {
+        'Authorization': 'Token $token',
+      },
+      body: {
+        'title': _title.text,
+        'priority': _priority.text,
+        'body': _body.text,
+      },
+    ) : await http.post(
       url,
       headers: {
         'Authorization': 'Token $token',
@@ -62,94 +96,122 @@ class _AddNotebookPageState extends State<AddNotebookPage> {
         'title': _title.text,
         'priority': _priority.text,
         'body': _body.text
-      }
+      },
     );
-
-    print("Raw API Response: ${response.body}"); // Debugging
 
     if (response.statusCode == 201) {
       FocusScope.of(context).unfocus();
       try {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-
-        print(jsonResponse);
         showAnimatedSnackBar(
             context, "Notebook Added Successfully", isSuccess: true,
             isTop: true);
-        Navigator.push(context, MaterialPageRoute(
-          builder: (context) => BottomNavBar(currentIndex: 0),),);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => BottomNavBar(currentIndex: 0)),
+        );
       } catch (e) {
-        print("Error parsing response: $e");
         showAnimatedSnackBar(
             context, "Something Went Wrong!", isError: true, isTop: true);
       }
+    } else if (response.statusCode == 200) {
+      FocusScope.of(context).unfocus();
+      showAnimatedSnackBar(
+          context, "Notebook Edited Successfully", isSuccess: true,
+          isTop: true);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => BottomNavBar(currentIndex: 0)),
+      );
     } else {
-      print("Failed to fetch notebooks: ${response.body}");
-      showAnimatedSnackBar(context, "Something Went Wrong!", isError: true,isTop: true);
+      showAnimatedSnackBar(
+          context, "Something Went Wrong!", isError: true, isTop: true);
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Add Notebook"),
-        toolbarHeight: 60,
-        backgroundColor: Theme.of(context).colorScheme.inverseSurface,
-        foregroundColor: Theme.of(context).colorScheme.surface,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: [
-              MyLabel(
-                text: "Title",
-                size: 18,
-                color: Theme.of(context).colorScheme.primary,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(icon: Icon(Icons.arrow_back), onPressed: () {
+                  Navigator.of(context).pop();
+                },),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 16.0),
+                  child: TextField(
+                    controller: _title,
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    decoration: InputDecoration(
+                      hintText: "Title",
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: TextField(
+                  controller: _body,
+                  keyboardType: TextInputType.multiline,
+                  maxLines: null,
+                  expands: true,
+                  decoration: InputDecoration(
+                    hintText: "Note",
+                    border: InputBorder.none,
+                  ),
+                ),
               ),
-              MyTextField(
-                controller: _title,
-                hintext: "Enter Title",
-                obscuretext: false,
-                prefixicon: Icon(Icons.title),
-                width: 80,
-                height: 20,
-                maxlines: 1,
-              ),
-              MyLabel(
-                text: "Priority",
-                size: 18,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              MyTextField(
-                controller: _priority,
-                hintext: "Enter Priority",
-                obscuretext: false,
-                prefixicon: Icon(Icons.priority_high),
-                width: 80,
-                height: 20,
-                maxlines: 1,
-              ),
-              MyLabel(
-                text: "Body",
-                size: 18,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              MyTextField(
-                controller: _body,
-                hintext: "Enter Body",
-                obscuretext: false,
-                prefixicon: Icon(Icons.text_fields),
-                width: 80,
-                height: 20,
-                maxlines: 10,
-              ),
-              MyButton(onPressed: () => _addNotebook(), text: "Save"),
-            ],
-          ),
+            ),
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          MyLabel(text: 'Priority:', size: 15, color: Theme
+                              .of(context)
+                              .colorScheme
+                              .surface),
+                          SizedBox(width: 15),
+                          Expanded(
+                            child: TextField(
+                              controller: _priority,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: "Priority (1-5)",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                    ],
+                  ),
+                ),
+                MyButton(onPressed: widget.notebookId != null
+                    ? () =>
+                    _addNotebook(notebookId: widget.notebookId.toString())
+                    : _addNotebook,
+                    text: widget.notebookId != null
+                        ? 'Edit Notebook'
+                        : 'Add Notebook',
+                    isGhost: true,
+                    margin: 18),
+              ],
+            )
+          ],
         ),
       ),
     );
