@@ -178,14 +178,15 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       final Map<String, dynamic> notebookData = jsonDecode(response.body);
       final List<String> pageUuids = List<String>.from(
           notebookData['pages'] ?? []);
-      final List<String> subpageUuids = List<String>.from(
-          notebookData['sugpages'] ?? []);
+      // final List<String> subpageUuids = List<String>.from(
+      //     notebookData['sugpages'] ?? []);
 
       if (pageUuids.isEmpty) {
         return []; // No pages found
-      } else if (subpageUuids.isEmpty) {
-        return [];
       }
+      //  else if (subpageUuids.isEmpty) {
+      //   return [];
+      // }
 
       // Fetch pages in parallel instead of sequentially
       final List<Map<String, dynamic>?> pages = await Future.wait(
@@ -194,19 +195,19 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       );
 
       // Fetch subpages in parallel instead of sequentially
-      final List<Map<String, dynamic>?> subpages = await Future.wait(
-        subpageUuids.map((uuid) =>
-            auth_service.AuthService.fetchSubPageDetails(uuid, _token)),
-      );
+      // final List<Map<String, dynamic>?> subpages = await Future.wait(
+      //   subpageUuids.map((uuid) =>
+      //       auth_service.AuthService.fetchSubPageDetails(uuid, _token)),
+      // );
 
       // Remove null results (failed fetches)
       final List<Map<String, dynamic>> validPages =
       pages.where((page) => page != null).cast<Map<String, dynamic>>().toList();
 
       // Remove null results (failed fetches)
-      final List<Map<String, dynamic>> validSubPages =
-      subpages.where((subpages) => subpages != null).cast<
-          Map<String, dynamic>>().toList();
+      // final List<Map<String, dynamic>> validSubPages =
+      // subpages.where((subpages) => subpages != null).cast<
+      //     Map<String, dynamic>>().toList();
 
       // Cache the fetched pages
       await auth_service.AuthService.savePagesLocally(
@@ -215,15 +216,15 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       await prefs.setString(
           'notebook_${widget.notebookId}', jsonEncode(validPages));
 
-      await auth_service.AuthService.saveSubPagesLocally(
-          notebookData['id'], validSubPages);
-      final SharedPreferences prefsSubpage = await SharedPreferences
-          .getInstance();
-      await prefsSubpage.setString(
-          'notebook_subpages_${widget.notebookId}', jsonEncode(validSubPages));
-      print("Subpages==>");
-      print(validSubPages);
-      return [...validPages, ...validSubPages];
+      // await auth_service.AuthService.saveSubPagesLocally(
+      //     notebookData['id'], validSubPages);
+      // final SharedPreferences prefsSubpage = await SharedPreferences
+      //     .getInstance();
+      // await prefsSubpage.setString(
+      //     'notebook_subpages_${widget.notebookId}', jsonEncode(validSubPages));
+      // print("Subpages==>");
+      // print(validSubPages);
+      return [...validPages];
     } else {
       setState(() {
         _errorMessage = "Failed to load notebook.";
@@ -354,9 +355,9 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
             Future<Map<String, dynamic>> _initNotebook() async {
               final List<Map<String,
-                  dynamic>> pages = await _fetchNotebookDetailsForPages();
+                  dynamic>> pages = await _fetchNotebookDetailsForPages(forceRefresh: true);
               final List<Map<String,
-                  dynamic>> subpages = await _fetchNotebookDetailsForSubPages();
+                  dynamic>> subpages = await _fetchNotebookDetailsForSubPages(forceRefresh: true);
               return {
                 'pages': pages,
                 'sugpages': subpages,
