@@ -593,11 +593,12 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
   Widget build(BuildContext context) {
     bool isFavourite = _notebookData?['is_favourite'] ?? false;
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       appBar: AppBar(
         title: widget.isPasswordProtected ? Text("LOCKED NOTEBOOK") : Text(""),
         backgroundColor: Theme
             .of(context)
-            .scaffoldBackgroundColor,
+            .colorScheme.inverseSurface,
         foregroundColor: Theme
             .of(context)
             .colorScheme
@@ -708,19 +709,17 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Sora',
-                        color: Theme
-                            .of(context)
-                            .colorScheme
-                            .tertiary,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                     Text(
                       "Last Updated: ${_formatDateTime(
                           _notebookData?['updated_at'])}",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Sora',
+                        
                       ),
                     ),
                     const SizedBox(height: 10),

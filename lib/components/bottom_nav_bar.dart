@@ -57,27 +57,30 @@ class _BottomNavBarState extends State<BottomNavBar> {
           color: Theme
               .of(context)
               .colorScheme
-              .tertiary,
+              .primary,
           size: 32,
         ),
         unselectedItemColor: Colors.grey.shade600,
         showSelectedLabels: true,
         showUnselectedLabels: true,
         onTap: _onTabTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.task_alt_sharp), label: 'Todos'),
+        items: [
+          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home', backgroundColor: Theme.of(context).colorScheme.inverseSurface),
+          BottomNavigationBarItem(icon: Icon(Icons.task_alt_sharp), label: 'Todos', backgroundColor: Theme.of(context).colorScheme.inverseSurface),
           BottomNavigationBarItem(
             icon: Icon(Icons.notifications),
             label: 'Reminders',
+            backgroundColor: Theme.of(context).colorScheme.inverseSurface,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.share),
             label: 'Shared',
+            backgroundColor: Theme.of(context).colorScheme.inverseSurface,
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),
             label: 'Profile',
+            backgroundColor: Theme.of(context).colorScheme.inverseSurface,
           ),
         ],
       ),

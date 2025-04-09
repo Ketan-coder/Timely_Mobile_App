@@ -162,15 +162,16 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       appBar: AppBar(
         title: _isLoading ? Text("") : Text("${_subpageData?['title']}"),
         backgroundColor: Theme
             .of(context)
-            .scaffoldBackgroundColor,
+            .colorScheme.inverseSurface,
         foregroundColor: Theme
             .of(context)
             .colorScheme
-            .primary,
+            .secondary,
       ),
       persistentFooterButtons: [
         Row(
@@ -242,9 +243,10 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
                   children: [
                     Text(
                       _subpageData?['title'] ?? 'Untitled',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                     Text(

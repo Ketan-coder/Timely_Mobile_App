@@ -133,27 +133,45 @@ class _AddNotebookPageState extends State<AddNotebookPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+      appBar: AppBar(
+        title: Text(widget.notebookId != null ? "Edit Notebook" : "Add Notebook"),
+        backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+        foregroundColor: Theme.of(context).colorScheme.primary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () {
+              Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => BottomNavBar(currentIndex: 0),
+            ),
+          );
+        },
+        child: const Icon(Icons.close),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            Row(
-              children: [
-                IconButton(icon: Icon(Icons.arrow_back), onPressed: () {
-                  Navigator.of(context).pop();
-                },),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 16.0),
-                  child: TextField(
-                    controller: _title,
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    decoration: InputDecoration(
-                      hintText: "Title",
-                      border: InputBorder.none,
-                    ),
-                  ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0, vertical: 16.0),
+              child: TextField(
+                controller: _title,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  hintText: "Title",
+                  border: InputBorder.none,
                 ),
-              ],
+              ),
             ),
             Expanded(
               child: Padding(

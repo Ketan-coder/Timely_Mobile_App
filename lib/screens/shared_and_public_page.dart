@@ -210,7 +210,12 @@ class _SharedTabState extends State<SharedTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final imageUrl = isDarkMode
+        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
+        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       body: NotificationListener<ScrollNotification>(
         onNotification: (scrollInfo) {
           // setState(() {
@@ -231,7 +236,7 @@ class _SharedTabState extends State<SharedTab> {
                 children: [
                   Positioned.fill(
                     child: Image.network(
-                      "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain",
+                      imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
@@ -353,7 +358,12 @@ class _PublicTabState extends State<PublicTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final imageUrl = isDarkMode
+        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
+        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       body: NotificationListener<ScrollNotification>(
         onNotification: (scrollInfo) {
           // setState(() {
@@ -374,7 +384,7 @@ class _PublicTabState extends State<PublicTab> {
                 children: [
                   Positioned.fill(
                     child: Image.network(
-                      "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain",
+                      imageUrl,
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(

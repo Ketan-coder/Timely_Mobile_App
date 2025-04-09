@@ -179,6 +179,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final Brightness brightness = Theme.of(context).brightness;
+    final bool isDarkMode = brightness == Brightness.dark;
+    print("Is Dark Mode: $isDarkMode");
+    final imageUrl = !isDarkMode
+        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
+        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
+
     return Scaffold(
       backgroundColor: Theme
           .of(context)
@@ -259,7 +266,7 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Positioned.fill(
                       child: Image.network(
-                        "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain",
+                        imageUrl,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(

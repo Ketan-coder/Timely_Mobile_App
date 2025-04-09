@@ -350,15 +350,16 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       appBar: AppBar(
         title: _isLoading ? Text("") : Text("${_pageData?['title']}"),
         backgroundColor: Theme
             .of(context)
-            .scaffoldBackgroundColor,
+            .colorScheme.inverseSurface,
         foregroundColor: Theme
             .of(context)
             .colorScheme
-            .primary,
+            .secondary,
       ),
       persistentFooterButtons: [
         Row(
@@ -430,9 +431,10 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                   children: [
                     Text(
                       _pageData?['title'] ?? 'Untitled',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                     Text(

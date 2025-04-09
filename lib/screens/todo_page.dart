@@ -256,7 +256,16 @@ class _TodoPageState extends State<TodoPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final imageUrl = isDarkMode
+        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
+        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
+
     return Scaffold(
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .inverseSurface,
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end, // Align buttons to the right
         children: [
@@ -318,7 +327,7 @@ class _TodoPageState extends State<TodoPage> {
                     children: [
                       Positioned.fill(
                         child: Image.network(
-                          "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain",
+                          imageUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
@@ -348,7 +357,7 @@ class _TodoPageState extends State<TodoPage> {
                                   color: Theme
                                       .of(context)
                                       .colorScheme
-                                      .tertiary ?? Colors.white,
+                                      .primary ?? Colors.white,
                                   fontSize: 48,
                                   fontWeight: FontWeight.w700,
                                 ),
