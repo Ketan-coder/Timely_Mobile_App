@@ -353,11 +353,20 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
           builder: (context, setState) {
             late Future<Map<String, dynamic>> _notebookFuture;
 
-            Future<Map<String, dynamic>> _initNotebook() async {
-              final List<Map<String,
-                  dynamic>> pages = await _fetchNotebookDetailsForPages(forceRefresh: true);
-              final List<Map<String,
-                  dynamic>> subpages = await _fetchNotebookDetailsForSubPages(forceRefresh: true);
+            Future<Map<String, dynamic>> _initNotebook({bool forceRefresh=false}) async {
+              late List<Map<String, dynamic>> pages;
+              late List<Map<String, dynamic>> subpages;
+              if (forceRefresh) {
+                pages = await _fetchNotebookDetailsForPages(forceRefresh: true);
+                subpages = await _fetchNotebookDetailsForSubPages(forceRefresh: true);
+              } else {
+                pages = await _fetchNotebookDetailsForPages();
+                subpages = await _fetchNotebookDetailsForSubPages();
+              }
+              // final List<Map<String,
+              //     dynamic>> pages = await _fetchNotebookDetailsForPages(forceRefresh: true);
+              // final List<Map<String,
+              //     dynamic>> subpages = await _fetchNotebookDetailsForSubPages(forceRefresh: true);
               return {
                 'pages': pages,
                 'sugpages': subpages,
@@ -368,7 +377,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
             Future<void> refreshPages() async {
               setState(() {
-                _notebookFuture = _initNotebook();
+                _notebookFuture = _initNotebook(forceRefresh: true);
               });
             }
 
