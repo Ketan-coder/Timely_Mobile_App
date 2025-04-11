@@ -99,7 +99,7 @@ class _MyAppState extends State<MyApp> {
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
           primary: Colors.deepPurple[100],
-          secondary: Colors.deepPurple[800],
+          secondary: Colors.deepPurple[200],
           onError: Colors.red[800],
           errorContainer: Colors.red[100],
           tertiary: Colors.deepPurple[100],
