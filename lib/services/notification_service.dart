@@ -18,6 +18,7 @@ class NotificationService {
 
     await _notificationsPlugin.initialize(initializationSettings);
     await requestExactAlarmsPermission();
+    await createNotificationChannel();
   }
 
   static Future<void> scheduleNotification({

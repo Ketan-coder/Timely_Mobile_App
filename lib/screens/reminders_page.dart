@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:timely/screens/notification_test_screen.dart';
 
 import '../auth/auth_service.dart' as auth_service;
+import '../components/custom_page_animation.dart';
 import '../components/custom_snack_bar.dart';
 import '../models/reminder.dart';
 import 'login_screen.dart';
@@ -146,6 +148,7 @@ class _RemindersPageState extends State<RemindersPage> {
         isTop: true,
       );
       if (alertTime.isAfter(DateTime.now())) {
+        print('[Notification Scheduled] → $alertTime');
         await NotificationService.scheduleNotification(
           id: DateTime
               .now()
@@ -474,6 +477,16 @@ class _RemindersPageState extends State<RemindersPage> {
             tooltip: "Add Reminder",
             onPressed: () => _addReminder(context),
             child: Icon(Icons.add),
+          ),
+          SizedBox(width: 12), // Adds spacing between buttons
+          FloatingActionButton(
+            heroTag: 'Reminder TEST BUTTON',
+            tooltip: "Reminder TEST BUTTON",
+            onPressed: () {
+              Navigator.of(context).push(
+                  createRoute(const NotificationTestPage()));
+            },
+            child: Icon(Icons.telegram),
           ),
         ],
       ),
