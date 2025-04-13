@@ -304,8 +304,8 @@ class AuthService {
 
         final List<dynamic> data = jsonResponse['results'];
 
-        print("Todos fetched successfully!");
-        print("Todos Data: ${jsonEncode(data)}");
+        print("Reminders fetched successfully!");
+        print("Reminders Data: ${jsonEncode(data)}");
 
         // Ensure items in 'data' are maps before conversion
         List<Reminder> reminders = data
@@ -319,7 +319,7 @@ class AuthService {
         print("Error parsing response: $e");
       }
     } else {
-      print("Failed to fetch todos: ${response.body}");
+      print("Failed to fetch Reminders: ${response.body}");
     }
   }
 

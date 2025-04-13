@@ -56,17 +56,11 @@ class _ProfilePageState extends State<ProfilePage> {
               flexibleSpace: Stack(
                 children: [
                   Positioned.fill(
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey,
-                          child: const Center(
-                            child: Text("Image failed to load"),
-                          ),
-                        );
-                      },
+                    child: Container(
+                      color: Theme
+                          .of(context)
+                          .colorScheme
+                          .onPrimary,
                     ),
                   ),
                   Positioned(

@@ -145,12 +145,16 @@ class _RemindersPageState extends State<RemindersPage> {
         isSuccess: true,
         isTop: true,
       );
-      await NotificationService.scheduleNotification(
-        id: 1,
-        title: 'Study Reminder',
-        body: 'Start revising Operating Systems 🧠',
-        scheduledDate: DateTime.now().add(Duration(seconds: 2)),
-      );
+      if (alertTime.isAfter(DateTime.now())) {
+        await NotificationService.scheduleNotification(
+          id: DateTime
+              .now()
+              .millisecondsSinceEpoch ~/ 1000,
+          title: reminderName,
+          body: reminderName,
+          scheduledDate: alertTime,
+        );
+      }
     } else {
       showAnimatedSnackBar(
         context,
@@ -164,7 +168,7 @@ class _RemindersPageState extends State<RemindersPage> {
   Future<void> _addReminder(BuildContext context) async {
     TextEditingController reminderController = TextEditingController();
     DateTime selectedDateTime = DateTime.now().add(
-        Duration(hours: 2)); // Default: Now + 2 hours
+        Duration(minutes: 1)); // Default: Now + 2 hours
 
     return showDialog<void>(
       context: context,
@@ -214,7 +218,7 @@ class _RemindersPageState extends State<RemindersPage> {
                       }
                     },
                     child: Text(
-                      "Pick Alert Time: ${selectedDateTime.toLocal()}",
+                      "Pick Alert Time: ${selectedDateTime}",
                       style: TextStyle(color: Theme
                           .of(context)
                           .colorScheme
@@ -492,17 +496,11 @@ class _RemindersPageState extends State<RemindersPage> {
               flexibleSpace: Stack(
                 children: [
                   Positioned.fill(
-                    child: Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey,
-                          child: const Center(
-                            child: Text("Image failed to load"),
-                          ),
-                        );
-                      },
+                    child: Container(
+                      color: Theme
+                          .of(context)
+                          .colorScheme
+                          .onPrimary,
                     ),
                   ),
                   Positioned(
@@ -549,67 +547,73 @@ class _RemindersPageState extends State<RemindersPage> {
             SliverList(
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                  final reminder = _reminders[index];
-                  bool isCompleted = reminder['is_completed'] ?? false;
-                  return ListTile(
-                    textColor: Theme
-                        .of(context)
-                        .colorScheme
-                        .surface,
-                    title: Text(reminder['title'] ?? 'Untitled',
-                      style: TextStyle(color: Theme
-                          .of(context)
-                          .colorScheme
-                          .primary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          decoration: isCompleted
-                              ? TextDecoration.lineThrough
-                              : TextDecoration.none,
-                          fontFamily: 'Sora'),),
-                    subtitle: Padding(
-                      padding: const EdgeInsets.all(2.0),
-                      child: Row(
-                        children: [
-                          isCompleted ? SizedBox() : Icon(
-                            Icons.notifications_active, size: 18, color: Theme
+                      final reminder = _reminders[index];
+                      bool isCompleted = reminder['is_completed'] ?? false;
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                            top: 12, left: 5, right: 5),
+                        child: ListTile(
+                          textColor: Theme
                               .of(context)
                               .colorScheme
-                              .surface,),
-                          isCompleted ? Text('Completed!', style: TextStyle(
-                            fontSize: 12,
-                            decoration: isCompleted
-                                ? TextDecoration.lineThrough
-                                : TextDecoration.none,)) : Text(
-                              ' ${_formatDateTime(
-                                  reminder['alert_time'])}',
-                              style: TextStyle(color: Theme
-                                  .of(context)
-                                  .colorScheme
-                                  .surface, fontSize: 12)),
-                        ],
-                      ),
-                    ),
-                    trailing: IconButton(onPressed: () async {
-                      await _deleteReminder(
-                          context, reminder['id'], reminder['title']);
-                    }, icon: Icon(Icons.delete, color: Colors.grey,)),
-                    leading: isCompleted
-                        ? IconButton(
-                      icon: Icon(Icons.done, color: Colors.green),
-                      onPressed: () async {
-                        await _toggleCompleted(reminder['id'],
-                            reminder['title'], isCompleted);
-                      },)
-                        : IconButton(icon: Icon(Icons.check_circle),
-                      onPressed: () async {
-                        await _toggleCompleted(reminder['id'],
-                            reminder['title'], isCompleted);
-                      },),
-                    onLongPress: () async {
-                      _editReminder(context, _reminders[index]);
-                    },
-                  );
+                              .surface,
+                          title: Text(reminder['title'] ?? 'Untitled',
+                            style: TextStyle(color: Theme
+                                .of(context)
+                                .colorScheme
+                                .primary,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                decoration: isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                                fontFamily: 'Sora'),),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.all(2.0),
+                            child: Row(
+                              children: [
+                                isCompleted ? SizedBox() : Icon(
+                                  Icons.notifications_active, size: 18,
+                                  color: Theme
+                                      .of(context)
+                                      .colorScheme
+                                      .surface,),
+                                isCompleted ? Text(
+                                    'Completed!', style: TextStyle(
+                                  fontSize: 12,
+                                  decoration: isCompleted
+                                      ? TextDecoration.lineThrough
+                                      : TextDecoration.none,)) : Text(
+                                    ' ${_formatDateTime(
+                                        reminder['alert_time'])}',
+                                    style: TextStyle(color: Theme
+                                        .of(context)
+                                        .colorScheme
+                                        .surface, fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                          trailing: IconButton(onPressed: () async {
+                            await _deleteReminder(
+                                context, reminder['id'], reminder['title']);
+                          }, icon: Icon(Icons.delete, color: Colors.grey,)),
+                          leading: isCompleted
+                              ? IconButton(
+                            icon: Icon(Icons.done, color: Colors.green),
+                            onPressed: () async {
+                              await _toggleCompleted(reminder['id'],
+                                  reminder['title'], isCompleted);
+                            },)
+                              : IconButton(icon: Icon(Icons.check_circle),
+                            onPressed: () async {
+                              await _toggleCompleted(reminder['id'],
+                                  reminder['title'], isCompleted);
+                            },),
+                          onLongPress: () async {
+                            _editReminder(context, _reminders[index]);
+                          },
+                        ),
+                      );
                 },
                 childCount: _reminders.length,
               ),

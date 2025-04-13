@@ -16,6 +16,8 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // await dotenv.load(fileName: ".env");
   await NotificationService.initialize();
+  // 🔥 Test notification immediately
+  await NotificationService.testImmediateNotification();
   runApp(const MyApp());
 }
 
@@ -81,6 +83,7 @@ class _MyAppState extends State<MyApp> {
           tertiary: Colors.deepPurple[100],
           surface: Colors.black87,
           inverseSurface: Colors.white,
+          onPrimary: Colors.deepPurple[50],
         ),
         useMaterial3: true,
       ),
@@ -105,6 +108,7 @@ class _MyAppState extends State<MyApp> {
           tertiary: Colors.deepPurple[100],
           surface: Colors.white,
           inverseSurface: Colors.black,
+          onPrimary: Colors.black38,
         ),
         scaffoldBackgroundColor: Colors.black,
       ),

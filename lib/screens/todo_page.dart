@@ -326,17 +326,11 @@ class _TodoPageState extends State<TodoPage> {
                   flexibleSpace: Stack(
                     children: [
                       Positioned.fill(
-                        child: Image.network(
-                          imageUrl,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey,
-                              child: const Center(
-                                child: Text("Image failed to load"),
-                              ),
-                            );
-                          },
+                        child: Container(
+                          color: Theme
+                              .of(context)
+                              .colorScheme
+                              .onPrimary,
                         ),
                       ),
                       Positioned(
@@ -383,49 +377,53 @@ class _TodoPageState extends State<TodoPage> {
                         (context, index) {
                           final todo = _todos[index];
                           bool isCompleted = todo['is_completed'] ?? false;
-                          return ListTile(
-                            textColor: Theme
-                                .of(context)
-                                .colorScheme
-                                .surface,
-                            title: Text(todo['title'] ?? 'Untitled',
-                              style: TextStyle(color: Theme
+                          return Padding(
+                            padding: EdgeInsets.only(
+                                top: 12, left: 5, right: 5),
+                            child: ListTile(
+                              textColor: Theme
                                   .of(context)
                                   .colorScheme
-                                  .primary,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  fontFamily: 'Sora'),),
-                            subtitle: Text('Last updated: ${_formatDateTime(
-                                todo['updated_at'])}'),
-                            trailing: IconButton(onPressed: () async {
-                              await _deleteTodo(
-                                  context, todo['id'], todo['title']);
-                            }, icon: Icon(Icons.delete, color: Colors.grey,)),
-                            leading: isCompleted
-                                ? IconButton(
-                              icon: Icon(Icons.done, color: Colors.green),
-                              onPressed: () async {
-                                await _toggleCompleted(todo['id'],
-                                    todo['title'], isCompleted);
-                              },)
-                                : IconButton(icon: Icon(Icons.check_circle),
-                              onPressed: () async {
-                                await _toggleCompleted(todo['id'],
-                                    todo['title'], isCompleted);
-                              },),
-                            onTap: () async {
-                              // await _showPasswordInputDialog(context,notebook['id'],notebook['title'],notebook['password'].toString(),isProtected);
-                              // Navigator.push(
-                              //   context,
-                              //   MaterialPageRoute(
-                              //     builder: (context) => NotebookDetailPage(
-                              //       notebookId: notebook['id'],
-                              //       isPasswordProtected: isProtected,
-                              //     ),
-                              //   ),
-                              // );
-                            },
+                                  .surface,
+                              title: Text(todo['title'] ?? 'Untitled',
+                                style: TextStyle(color: Theme
+                                    .of(context)
+                                    .colorScheme
+                                    .primary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    fontFamily: 'Sora'),),
+                              subtitle: Text('Last updated: ${_formatDateTime(
+                                  todo['updated_at'])}'),
+                              trailing: IconButton(onPressed: () async {
+                                await _deleteTodo(
+                                    context, todo['id'], todo['title']);
+                              }, icon: Icon(Icons.delete, color: Colors.grey,)),
+                              leading: isCompleted
+                                  ? IconButton(
+                                icon: Icon(Icons.done, color: Colors.green),
+                                onPressed: () async {
+                                  await _toggleCompleted(todo['id'],
+                                      todo['title'], isCompleted);
+                                },)
+                                  : IconButton(icon: Icon(Icons.check_circle),
+                                onPressed: () async {
+                                  await _toggleCompleted(todo['id'],
+                                      todo['title'], isCompleted);
+                                },),
+                              onTap: () async {
+                                // await _showPasswordInputDialog(context,notebook['id'],notebook['title'],notebook['password'].toString(),isProtected);
+                                // Navigator.push(
+                                //   context,
+                                //   MaterialPageRoute(
+                                //     builder: (context) => NotebookDetailPage(
+                                //       notebookId: notebook['id'],
+                                //       isPasswordProtected: isProtected,
+                                //     ),
+                                //   ),
+                                // );
+                              },
+                            ),
                           );
                         },
                     childCount: _todos.length,

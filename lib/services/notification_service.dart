@@ -8,12 +8,13 @@ class NotificationService {
 
   static Future<void> initialize() async {
     tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    AndroidInitializationSettings('@mipmap/ic_launcher');
 
     final InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+    InitializationSettings(android: initializationSettingsAndroid);
 
     await _notificationsPlugin.initialize(initializationSettings);
     await requestExactAlarmsPermission();
@@ -52,14 +53,46 @@ class NotificationService {
     final androidImplementation =
         _notificationsPlugin
             .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
+            AndroidFlutterLocalNotificationsPlugin
+        >();
 
     final bool? granted =
-        await androidImplementation?.requestExactAlarmsPermission();
+    await androidImplementation?.requestExactAlarmsPermission();
     if (granted == false) {
       print('Exact alarms permission not granted');
       // You can guide the user to settings if needed
     }
   }
+
+  static Future<void> createNotificationChannel() async {
+    final androidImplementation = _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidImplementation?.createNotificationChannel(
+        AndroidNotificationChannel(
+          'reminder_channel',
+          'Reminders',
+          description: 'Channel for reminder notifications',
+          importance: Importance.max,
+        ));
+  }
+
+  static Future<void> testImmediateNotification() async {
+    await _notificationsPlugin.show(
+      99,
+      'Immediate Test',
+      'This should appear instantly 🔔',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'test_channel',
+          'Test',
+          channelDescription: 'Test notification channel',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
+
 }

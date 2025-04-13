@@ -265,17 +265,11 @@ class _HomePageState extends State<HomePage> {
                 flexibleSpace: Stack(
                   children: [
                     Positioned.fill(
-                      child: Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey,
-                            child: const Center(
-                              child: Text("Image failed to load"),
-                            ),
-                          );
-                        },
+                      child: Container(
+                        color: Theme
+                            .of(context)
+                            .colorScheme
+                            .onPrimary,
                       ),
                     ),
                     Positioned(
@@ -320,45 +314,50 @@ class _HomePageState extends State<HomePage> {
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                    final notebook = _notebooks[index];
-                    bool isProtected = notebook['is_password_protected'] ?? false;
-                    return ListTile(
-                      textColor: Theme
-                          .of(context)
-                          .colorScheme
-                          .surface,
-                      title: Text(notebook['title'] ?? 'Untitled',
-                        style: TextStyle(color: Theme
-                            .of(context)
-                            .colorScheme
-                            .primary,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            fontFamily: 'Sora'),),
-                      subtitle: Text(
-                          '${_formatDateTime(notebook['updated_at'])}'),
-                      leading: Icon(Icons.book, color: Theme
-                          .of(context)
-                          .colorScheme
-                          .tertiary,),
-                      trailing: isProtected
-                          ? const Icon(Icons.lock, color: Colors.red)
-                          : const SizedBox(),
-                      onTap: () async {
-                        await _showPasswordInputDialog(
-                            context, notebook['id'], notebook['title'],
-                            notebook['password'].toString(), isProtected);
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (context) => NotebookDetailPage(
-                        //       notebookId: notebook['id'],
-                        //       isPasswordProtected: isProtected,
-                        //     ),
-                        //   ),
-                        // );
-                      },
-                    );
+                        final notebook = _notebooks[index];
+                        bool isProtected = notebook['is_password_protected'] ??
+                            false;
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                              top: 8, left: 5, right: 5),
+                          child: ListTile(
+                            textColor: Theme
+                                .of(context)
+                                .colorScheme
+                                .surface,
+                            title: Text(notebook['title'] ?? 'Untitled',
+                              style: TextStyle(color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  fontFamily: 'Sora'),),
+                            subtitle: Text(
+                                '${_formatDateTime(notebook['updated_at'])}'),
+                            leading: Icon(Icons.book, color: Theme
+                                .of(context)
+                                .colorScheme
+                                .tertiary,),
+                            trailing: isProtected
+                                ? const Icon(Icons.lock, color: Colors.red)
+                                : const SizedBox(),
+                            onTap: () async {
+                              await _showPasswordInputDialog(
+                                  context, notebook['id'], notebook['title'],
+                                  notebook['password'].toString(), isProtected);
+                              // Navigator.push(
+                              //   context,
+                              //   MaterialPageRoute(
+                              //     builder: (context) => NotebookDetailPage(
+                              //       notebookId: notebook['id'],
+                              //       isPasswordProtected: isProtected,
+                              //     ),
+                              //   ),
+                              // );
+                            },
+                          ),
+                        );
                   },
                   childCount: _notebooks.length,
                 ),
