@@ -18,6 +18,16 @@ void main() async {
   await NotificationService.initialize();
   // 🔥 Test notification immediately
   await NotificationService.testImmediateNotification();
+  debugPrint('🔥 Test notification scheduling..........');
+  await NotificationService.scheduleNotification(
+    id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+    title: '🔥 Emulator Notification',
+    body: 'You should see this in 20 seconds!',
+    scheduledDate: DateTime.now().add(Duration(seconds: 20)),
+  );
+  debugPrint('🔥 Test notification scheduled!');
+
+
   runApp(const MyApp());
 }
 

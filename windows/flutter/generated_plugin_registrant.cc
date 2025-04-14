@@ -11,7 +11,7 @@
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
   PermissionHandlerWindowsPluginRegisterWithRegistrar(
-          registry->GetRegistrarForPlugin("PermissionHandlerWindowsPlugin"));
+      registry->GetRegistrarForPlugin("PermissionHandlerWindowsPlugin"));
   UrlLauncherWindowsRegisterWithRegistrar(
-          registry->GetRegistrarForPlugin("UrlLauncherWindows"));
+      registry->GetRegistrarForPlugin("UrlLauncherWindows"));
 }
