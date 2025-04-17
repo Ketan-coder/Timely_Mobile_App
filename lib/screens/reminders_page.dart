@@ -149,7 +149,7 @@ class _RemindersPageState extends State<RemindersPage> {
       );
       if (alertTime.isAfter(DateTime.now())) {
         print('[Notification Scheduled] → $alertTime');
-        await NotificationService.scheduleNotification(
+        await NotificationService.scheduleUsingShow(
           id: DateTime
               .now()
               .millisecondsSinceEpoch ~/ 1000,

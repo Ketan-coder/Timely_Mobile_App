@@ -19,7 +19,7 @@ void main() async {
   // 🔥 Test notification immediately
   await NotificationService.testImmediateNotification();
   debugPrint('🔥 Test notification scheduling..........');
-  await NotificationService.scheduleNotification(
+  await NotificationService.scheduleUsingShow(
     id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
     title: '🔥 Emulator Notification',
     body: 'You should see this in 20 seconds!',

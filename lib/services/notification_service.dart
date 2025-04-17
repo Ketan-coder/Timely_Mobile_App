@@ -60,6 +60,7 @@ class NotificationService {
         matchDateTimeComponents: DateTimeComponents.dateAndTime,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
+
       print('[SCHEDULE] Notification scheduled successfully.');
       final pending = await _notificationsPlugin.pendingNotificationRequests();
       print('[DEBUG] Total Pending Notifications: ${pending.length}');
@@ -105,6 +106,8 @@ class NotificationService {
     print('[CHANNEL] Notification channel created.');
   }
 
+  
+
   static Future<void> testImmediateNotification() async {
     print('[TEST] Showing immediate test notification...');
     await _notificationsPlugin.show(
@@ -122,4 +125,40 @@ class NotificationService {
       ),
     );
   }
+
+  static Future<void> scheduleUsingShow({
+  required int id,
+  required String title,
+  required String body,
+  required DateTime scheduledDate,
+}) async {
+  final now = DateTime.now();
+  final delay = scheduledDate.difference(now);
+
+  if (delay.isNegative) {
+    print('[SCHEDULE] Scheduled time is in the past. Skipping notification.');
+    return;
+  }
+
+  print('[SCHEDULE] Notification will show in ${delay.inSeconds} seconds');
+
+  Future.delayed(delay, () async {
+    print('[SCHEDULE] Showing scheduled notification now...');
+    await _notificationsPlugin.show(
+      id,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'fallback_channel',
+          'Fallback',
+          channelDescription: 'Fallback when timezone setup fails',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  });
+}
+
 }
