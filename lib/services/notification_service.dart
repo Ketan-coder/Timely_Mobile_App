@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timely/auth/auth_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -218,11 +219,17 @@ class NotificationService {
       final now = DateTime.now();
       for (var n in _manualNotifications) {
         if (!n.isShown && n.scheduledDate.isBefore(now)) {
+          final isCompleted = await AuthService.checkIfReminderIsCompleted(n.id);
+          print('[MANUAL] Checking reminder ${n.id} status...');
+          print('[MANUAL] Reminder ${n.id} status: ${isCompleted ? 'Completed' : 'Not Completed'}');
+          
+          // If the reminder is not completed, show the notification
+          if (!isCompleted) {
           await _notificationsPlugin.show(
             n.id,
             n.title,
             n.body,
-             NotificationDetails(
+            NotificationDetails(
               android: AndroidNotificationDetails(
                 n.channelId,
                 n.channelName,
@@ -234,6 +241,10 @@ class NotificationService {
           );
           print('[MANUAL] Notification shown → ID: ${n.id}');
           n.isShown = true;
+        } else {
+          print('[MANUAL] Reminder ${n.id} already completed. Skipping...');
+          n.isShown = true;
+        }
         }
       }
 

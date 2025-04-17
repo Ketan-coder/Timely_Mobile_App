@@ -339,6 +339,46 @@ class AuthService {
     return [];
   }
 
+  static Future<bool> checkIfReminderIsCompleted(int reminderId) async {
+  try {
+    String? token = await AuthService.getToken();
+    if (token == null) {
+      return false;
+    }
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/remainders/$reminderId/');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      print(data);
+      return data['is_completed'] ?? false; // Check if 'is_completed' key exists
+    } else if (response.statusCode == 404) {
+      print('[ERROR] Reminder with ID $reminderId not found.');
+      return false;
+    } else if (response.statusCode == 403) {
+      print('[ERROR] Unauthorized access to reminder $reminderId.');
+      return false;
+    } else if (response.statusCode == 500) {
+      print('[ERROR] Server error while checking reminder $reminderId.');
+      return false;
+    } else {
+      print('[ERROR] Failed to fetch status for reminder $reminderId');
+      return false;
+    }
+  } catch (e) {
+    print('[EXCEPTION] Error checking completion status: $e');
+    return false;
+  }
+}
+
+
   static Future<Map<String, dynamic>?> fetchNotebookDetails(String token,
       int notebookId) async {
     final url = Uri.parse(

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -166,6 +168,12 @@ class _RemindersPageState extends State<RemindersPage> {
     print(response);
     if (response.statusCode == 201) {
       _initializeData();
+      print("Response ==>");
+      print(response.body);
+      final responseData = jsonDecode(response.body);
+      int newly_created_reminder = responseData['id'];
+      print("ID ==>");
+      print(newly_created_reminder);
       showAnimatedSnackBar(
         context,
         "$reminderName Added Successfully",
@@ -183,9 +191,7 @@ class _RemindersPageState extends State<RemindersPage> {
         //   scheduledDate: alertTime,
         // );
         NotificationService.addManualNotification(
-          id: DateTime
-              .now()
-              .millisecondsSinceEpoch ~/ 1000,
+          id: newly_created_reminder,
           title: "Reminders",
           body: formatReminderBody(reminderName),
           scheduledDate: alertTime,
