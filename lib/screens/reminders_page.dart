@@ -23,6 +23,31 @@ class _RemindersPageState extends State<RemindersPage> {
   bool _isRefreshing = false;
   String? _token; // Store token
 
+  String formatReminderBody(String task) {
+    final shortTemplates = [
+      '🔔 Reminder: {{task}}',
+      '📝 {{task}} — Don’t forget!',
+      '✨ It\'s time: {{task}}',
+      'Just a reminder ➤ {{task}}',
+      '👉 {{task}} — You got this!',
+      '⏰ {{task}}',
+    ];
+
+    final longTemplates = [
+      '🔔 Hey! You’ve got a reminder:\n{{task}}',
+      '📌 Here’s what you planned:\n{{task}}',
+      '⏰ Don’t miss it!\n{{task}}',
+      '🧠 Just checking in...\n{{task}}',
+      '📝 Reminder:\n{{task}}',
+    ];
+
+    final isShort = task.length <= 30;
+    final templates = isShort ? shortTemplates : longTemplates;
+    final selected = templates[DateTime.now().second % templates.length];
+    return selected.replaceAll('{{task}}', task);
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -148,15 +173,27 @@ class _RemindersPageState extends State<RemindersPage> {
         isTop: true,
       );
       if (alertTime.isAfter(DateTime.now())) {
-        print('[Notification Scheduled] → $alertTime');
-        await NotificationService.scheduleUsingShow(
+        // print('[Notification Scheduled] → $alertTime');
+        // await NotificationService.scheduleUsingShow(
+        //   id: DateTime
+        //       .now()
+        //       .millisecondsSinceEpoch ~/ 1000,
+        //   title: reminderName,
+        //   body: reminderName,
+        //   scheduledDate: alertTime,
+        // );
+        NotificationService.addManualNotification(
           id: DateTime
               .now()
               .millisecondsSinceEpoch ~/ 1000,
-          title: reminderName,
-          body: reminderName,
+          title: "Reminders",
+          body: formatReminderBody(reminderName),
           scheduledDate: alertTime,
+          channelId: 'reminder_channel',
+          channelName: 'Reminder Notifications',
+          channelDescription: 'Channel for reminder notifications',
         );
+        print('[Notification Scheduled] → $alertTime');
       }
     } else {
       showAnimatedSnackBar(

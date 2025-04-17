@@ -1,10 +1,38 @@
+import 'dart:async';
+
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+// ✅ This class handles manually tracked notifications
+class _PendingNotification {
+  final int id;
+  final String title;
+  final String body;
+  final DateTime scheduledDate;
+  final String channelId;
+  final String channelName;
+  final String channelDescription;
+  bool isShown;
+
+  _PendingNotification( {
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.scheduledDate,
+    required this.channelId,
+    required this.channelName,
+    required this.channelDescription,
+    this.isShown = false,
+  });
+}
+
+
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+
+  static final List<_PendingNotification> _manualNotifications = [];
 
   static Future<void> initialize() async {
     print('[INIT] Initializing Notification Service...');
@@ -106,8 +134,6 @@ class NotificationService {
     print('[CHANNEL] Notification channel created.');
   }
 
-  
-
   static Future<void> testImmediateNotification() async {
     print('[TEST] Showing immediate test notification...');
     await _notificationsPlugin.show(
@@ -131,6 +157,8 @@ class NotificationService {
   required String title,
   required String body,
   required DateTime scheduledDate,
+  required String channelId,
+  required String channelName,
 }) async {
   final now = DateTime.now();
   final delay = scheduledDate.difference(now);
@@ -148,11 +176,11 @@ class NotificationService {
       id,
       title,
       body,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
-          'fallback_channel',
-          'Fallback',
-          channelDescription: 'Fallback when timezone setup fails',
+          channelId,
+          channelName,
+          channelDescription: 'Channel for scheduled notifications',
           importance: Importance.max,
           priority: Priority.high,
         ),
@@ -161,4 +189,57 @@ class NotificationService {
   });
 }
 
+
+  // ✅ Add manual notification to check periodically
+  static void addManualNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    required String channelId,
+    required String channelName,
+    required String channelDescription,
+  }) {
+    _manualNotifications.add(_PendingNotification(
+      id: id,
+      title: title,
+      body: body,
+      scheduledDate: scheduledDate,
+      channelId: channelId,
+      channelName: channelName,
+      channelDescription: channelDescription,
+    ));
+    print('[MANUAL] Added ID $id for scheduled show at $scheduledDate');
+  }
+
+  // ✅ Periodically check pending ones
+  static void startManualNotificationMonitor({Duration interval = const Duration(seconds: 5)}) {
+    Timer.periodic(interval, (timer) async {
+      final now = DateTime.now();
+      for (var n in _manualNotifications) {
+        if (!n.isShown && n.scheduledDate.isBefore(now)) {
+          await _notificationsPlugin.show(
+            n.id,
+            n.title,
+            n.body,
+             NotificationDetails(
+              android: AndroidNotificationDetails(
+                n.channelId,
+                n.channelName,
+                channelDescription: n.channelDescription,
+                importance: Importance.max,
+                priority: Priority.high,
+              ),
+            ),
+          );
+          print('[MANUAL] Notification shown → ID: ${n.id}');
+          n.isShown = true;
+        }
+      }
+
+      _manualNotifications.removeWhere((n) => n.isShown);
+    });
+
+    print('[MONITOR] Started manual notification checker every ${interval.inSeconds} seconds.');
+  }
 }

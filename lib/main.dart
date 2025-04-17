@@ -16,14 +16,24 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // await dotenv.load(fileName: ".env");
   await NotificationService.initialize();
+  NotificationService.startManualNotificationMonitor();
   // 🔥 Test notification immediately
   await NotificationService.testImmediateNotification();
   debugPrint('🔥 Test notification scheduling..........');
-  await NotificationService.scheduleUsingShow(
+  // await NotificationService.scheduleUsingShow(
+  //   id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+  //   title: '🔥 Emulator Notification',
+  //   body: 'You should see this in 20 seconds!',
+  //   scheduledDate: DateTime.now().add(Duration(seconds: 20)),
+  // );
+  NotificationService.addManualNotification(
     id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    title: '🔥 Emulator Notification',
-    body: 'You should see this in 20 seconds!',
-    scheduledDate: DateTime.now().add(Duration(seconds: 20)),
+    title: '🔔 Reminder',
+    body: 'This is a manually checked notification!',
+    scheduledDate: DateTime.now().add(Duration(seconds: 10)),
+    channelId: 'manual_notifications',
+    channelName: 'Manual Notifications',
+    channelDescription: 'Notifications that are manually tracked',
   );
   debugPrint('🔥 Test notification scheduled!');
 
