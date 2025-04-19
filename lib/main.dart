@@ -8,6 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
@@ -18,25 +19,26 @@ void main() async {
   await NotificationService.initialize();
   NotificationService.startManualNotificationMonitor();
   // 🔥 Test notification immediately
-  await NotificationService.testImmediateNotification();
-  debugPrint('🔥 Test notification scheduling..........');
+  // await NotificationService.testImmediateNotification();
+  // debugPrint('🔥 Test notification scheduling..........');
   // await NotificationService.scheduleUsingShow(
   //   id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
   //   title: '🔥 Emulator Notification',
   //   body: 'You should see this in 20 seconds!',
   //   scheduledDate: DateTime.now().add(Duration(seconds: 20)),
   // );
-  NotificationService.addManualNotification(
-    id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    title: '🔔 Reminder',
-    body: 'This is a manually checked notification!',
-    scheduledDate: DateTime.now().add(Duration(seconds: 10)),
-    channelId: 'manual_notifications',
-    channelName: 'Manual Notifications',
-    channelDescription: 'Notifications that are manually tracked',
-  );
-  debugPrint('🔥 Test notification scheduled!');
+  // NotificationService.addManualNotification(
+  //   id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+  //   title: '🔔 Reminder',
+  //   body: 'This is a manually checked notification!',
+  //   scheduledDate: DateTime.now().add(Duration(seconds: 10)),
+  //   channelId: 'reminder_channel',
+  //   channelName: 'Reminders',
+  //   channelDescription: 'Notifications that are manually tracked',
+  // );
+  // debugPrint('🔥 Test notification scheduled!');
 
+  await AndroidAlarmManager.initialize();
 
   runApp(const MyApp());
 }

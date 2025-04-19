@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:timely/screens/notification_test_screen.dart';
+import 'package:timely/services/alarm_service.dart';
 
 import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
@@ -54,6 +55,7 @@ class _RemindersPageState extends State<RemindersPage> {
   void initState() {
     super.initState();
     _initializeData();
+    
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -113,6 +115,11 @@ class _RemindersPageState extends State<RemindersPage> {
     } catch (e) {
       return "Invalid date";
     }
+  }
+
+  void alarmTriggeredCallback() async {
+    print('⏰ Alarm triggered!');
+    await NotificationService.testImmediateNotification();
   }
 
   Future<void> _toggleCompleted(int remaindersId, String remaindersName,
@@ -198,6 +205,14 @@ class _RemindersPageState extends State<RemindersPage> {
           channelId: 'reminder_channel',
           channelName: 'Reminder Notifications',
           channelDescription: 'Channel for reminder notifications',
+        );
+        final alarmService = AlarmService();
+        alarmService.setAlarm(
+          alertTime,
+          newly_created_reminder,
+          alarmTriggeredCallback,
+          reminderName,
+          formatReminderBody(reminderName),
         );
         print('[Notification Scheduled] → $alertTime');
       }

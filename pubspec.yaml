@@ -45,6 +45,7 @@ dependencies:
   flutter_keyboard_visibility: ^6.0.0
   flutter_local_notifications: ^19.0.0
   permission_handler: ^12.0.0+1
+  android_alarm_manager_plus: ^4.0.7
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timely/auth/auth_service.dart';
@@ -160,6 +161,14 @@ class NotificationService {
   required DateTime scheduledDate,
   required String channelId,
   required String channelName,
+  String channelDescription = 'Channel for scheduled notifications',
+  bool showWhen = true,
+  bool onGoing = false,
+  bool autoCancel = true,
+  bool enableVibration = true,
+  bool playSound = true,
+  Int64List? vibrationPattern = null,
+  List<AndroidNotificationAction>? actions = const []
 }) async {
   final now = DateTime.now();
   final delay = scheduledDate.difference(now);
@@ -184,6 +193,13 @@ class NotificationService {
           channelDescription: 'Channel for scheduled notifications',
           importance: Importance.max,
           priority: Priority.high,
+          showWhen: showWhen,
+          ongoing: onGoing,
+          autoCancel: autoCancel,
+          enableVibration: enableVibration,
+          vibrationPattern: vibrationPattern ?? Int64List.fromList([0, 500, 200, 500]), // Custom vibration pattern
+          playSound: playSound,
+          actions: actions,
         ),
       ),
     );
@@ -236,6 +252,21 @@ class NotificationService {
                 channelDescription: n.channelDescription,
                 importance: Importance.max,
                 priority: Priority.high,
+                enableVibration: true,
+                vibrationPattern: Int64List.fromList([0, 500, 200, 500]), // Custom vibration pattern
+                playSound: true,
+                actions: [
+                  // AndroidNotificationAction(
+                  //   'Complete',
+                  //   'Complete',
+                  //   showsUserInterface: true,
+                  // ),
+                  AndroidNotificationAction(
+                    'DISMISS',
+                    'Dismiss',
+                    showsUserInterface: true,
+                  ),
+                ],
               ),
             ),
           );

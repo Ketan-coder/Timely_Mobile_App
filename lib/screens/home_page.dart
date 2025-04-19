@@ -219,11 +219,8 @@ class _HomePageState extends State<HomePage> {
             heroTag: 'Add Notebook Button',
             tooltip: "Add Notebook",
             onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => AddNotebookPage(),
-                ),
+              Navigator.of(context).push(
+                createRoute(AddNotebookPage())
               );
             },
             child: Icon(Icons.add),
