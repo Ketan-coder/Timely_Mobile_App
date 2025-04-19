@@ -140,12 +140,40 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
       }
     } else {
-      showAnimatedSnackBar(
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      final dynamic errorMessage = data['error'] ??
+          data['non_field_errors'] ??
+          data['username'] ??
+          data['email'] ??
+          data['password'] ??
+          data['password2'] ??
+          'An unknown error occurred.';
+
+      if (errorMessage is List) {
+        for (var error in errorMessage) {
+          showAnimatedSnackBar(
         context,
-        "Invalid credentials",
+        error.toString(),
         isError: true,
         isTop: true,
-      );
+          );
+          await Future.delayed(const Duration(seconds: 2)); // Delay for each error
+        }
+      } else if (errorMessage is String) {
+        showAnimatedSnackBar(
+          context,
+          errorMessage,
+          isError: true,
+          isTop: true,
+        );
+      } else {
+        showAnimatedSnackBar(
+          context,
+          'An unknown error occurred.',
+          isError: true,
+          isTop: true,
+        );
+      }
     }
 
     setState(() {
