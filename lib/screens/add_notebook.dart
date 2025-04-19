@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_quill/quill_delta.dart';
 import 'package:http/http.dart' as http;
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/bottom_nav_bar.dart';
