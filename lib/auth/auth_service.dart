@@ -78,9 +78,6 @@ class AuthService {
         }
 
         final List<dynamic> data = jsonResponse['results'];
-        final int count = jsonResponse['count'];
-        final String next = jsonResponse['next'];
-        final String previous = jsonResponse['previous'];
 
         print("Notebooks fetched successfully!");
         print("Notebook Data: ${jsonEncode(data)}");

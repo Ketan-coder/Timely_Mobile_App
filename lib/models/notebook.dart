@@ -47,8 +47,8 @@ class Notebook {
       pages: List<String>.from(json['pages']),
       sugPages: List<String>.from(json['sugpages']),
       notebookUuid: json['notebook_uuid'],
-      title: json['title'],
-      body: json['body'],
+      title: json['title'] ?? 'Untitled',
+      body: json['body'] ?? 'Body',
       priority: json['priority'],
       isFavourite: json['is_favourite'],
       isShared: json['is_shared'],
@@ -108,7 +108,7 @@ class Notebook {
           .toList();
     }
 
-    // ✅ If it's already a list, decode normally
+    // If it's already a list, decode normally
     if (decodedJson is List<dynamic>) {
       return decodedJson
           .map<Notebook>(

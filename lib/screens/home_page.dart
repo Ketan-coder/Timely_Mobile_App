@@ -33,8 +33,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _initializeData();
-    _filteredNotebooks =
-        _notebooks.map((map) => Notebook.fromJson(map)).toList();
+
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -56,6 +55,10 @@ class _HomePageState extends State<HomePage> {
       await auth_service.AuthService.fetchNotebooks(_token!);
       await _loadNotebooks();
       setState(() => _isRefreshing = false);
+      _filteredNotebooks =
+          _notebooks.map((map) => Notebook.fromJson(map)).toList();
+      _filterWith = 'all';
+      _filterNotebooks();
     } else {
       print("Error: Authentication token is null");
     }
@@ -211,7 +214,7 @@ class _HomePageState extends State<HomePage> {
             .where((notebook) =>
         notebook.priority == 4 || notebook.priority == 5)
             .toList();
-      } else if (_filterWith == 'all') {
+      } else if (_filterWith == 'all' || _filterWith == null) {
         // If no filter is selected or an invalid filter, show all notebooks
         _filteredNotebooks =
             _notebooks.map((map) => Notebook.fromJson(map)).toList();
@@ -467,7 +470,6 @@ class _HomePageState extends State<HomePage> {
                 delegate: SliverChildBuilderDelegate(
                       (context, index) {
                     final notebook;
-                    final _filterNotebook;
                     if (_isSearching) {
                       notebook = _searchedNotebooks[index];
                     } else if (_filterWith != null) {
@@ -496,8 +498,8 @@ class _HomePageState extends State<HomePage> {
                               fontWeight: FontWeight.w800,
                               fontFamily: 'Sora'),),
                         subtitle: Text(
-                            '${_formatDateTime(
-                                (notebook.updatedAt).toString())}'),
+                            _formatDateTime(
+                                (notebook.updatedAt).toString())),
                         leading: Icon(Icons.book, color: Theme
                             .of(context)
                             .colorScheme
@@ -509,23 +511,14 @@ class _HomePageState extends State<HomePage> {
                           await _showPasswordInputDialog(
                               context, notebook.id, notebook.title,
                               notebook.password.toString(), isProtected);
-                          // Navigator.push(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //     builder: (context) => NotebookDetailPage(
-                          //       notebookId: notebook['id'],
-                          //       isPasswordProtected: isProtected,
-                          //     ),
-                          //   ),
-                          // );
                         },
                       ),
                     );
-                  },
-                  childCount: _filterWith != null
+                      },
+                  childCount: _isSearching
+                      ? _searchedNotebooks.length : _filterWith != null
                       ? _filteredNotebooks.length
-                      : _isSearching ? _searchedNotebooks.length : _notebooks
-                      .length,
+                      : _notebooks.length,
                 ),
               ),
             ],
