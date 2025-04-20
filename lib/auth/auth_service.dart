@@ -46,9 +46,16 @@ class AuthService {
     return [];
   }
 
-  static Future<void> fetchNotebooks(String token) async {
-    final url = Uri.parse(
-        'https://timely.pythonanywhere.com/api/v1/notebooks/');
+  static Future<void> fetchNotebooks(String token, {int? pageNumber}) async {
+    //final url = Uri.parse('https://timely.pythonanywhere.com/api/v1/notebooks/');
+    final Uri url;
+    if (pageNumber == null || pageNumber == 1) {
+      url = Uri.parse(
+          'https://timely.pythonanywhere.com/api/v1/notebooks/');
+    } else {
+      url = Uri.parse(
+          'https://timely.pythonanywhere.com/api/v1/notebooks/?page=$pageNumber');
+    }
     final response = await http.get(
       url,
       headers: {
@@ -71,6 +78,9 @@ class AuthService {
         }
 
         final List<dynamic> data = jsonResponse['results'];
+        final int count = jsonResponse['count'];
+        final String next = jsonResponse['next'];
+        final String previous = jsonResponse['previous'];
 
         print("Notebooks fetched successfully!");
         print("Notebook Data: ${jsonEncode(data)}");
@@ -200,6 +210,152 @@ class AuthService {
     }
   }
 
+  static Future<List<Notebook>> searchPublicNotebooks(String token,
+      String searchTerm) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/').replace(
+        queryParameters: {'is_public': 'True', 'search': searchTerm});
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return []; // Return an empty list in case of an error
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Searched Notebook fetched successfully!");
+        print("Searched Notebook Data ==> ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<Notebook> notebooks = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        return notebooks; // Return the fetched notebooks
+      } catch (e) {
+        print("Error parsing response: $e");
+        return []; // Return an empty list in case of parsing error
+      }
+    } else {
+      print("Failed to fetch searching notebooks: ${response.body}");
+      return []; // Return an empty list if the API call fails
+    }
+  }
+
+  static Future<List<Notebook>> searchSharedNotebooks(String token,
+      String searchTerm) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/').replace(
+        queryParameters: {'shared_with_me': 'True', 'search': searchTerm});
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return []; // Return an empty list in case of an error
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Searched Notebook fetched successfully!");
+        print("Searched Notebook Data ==> ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<Notebook> notebooks = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        return notebooks; // Return the fetched notebooks
+      } catch (e) {
+        print("Error parsing response: $e");
+        return []; // Return an empty list in case of parsing error
+      }
+    } else {
+      print("Failed to fetch searching notebooks: ${response.body}");
+      return []; // Return an empty list if the API call fails
+    }
+  }
+
+
+  static Future<List<Notebook>> searchNotebooks(String token,
+      String searchTerm) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/').replace(
+        queryParameters: {'search': searchTerm});
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return []; // Return an empty list in case of an error
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Searched Notebook fetched successfully!");
+        print("Searched Notebook Data ==> ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<Notebook> notebooks = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        return notebooks; // Return the fetched notebooks
+      } catch (e) {
+        print("Error parsing response: $e");
+        return []; // Return an empty list in case of parsing error
+      }
+    } else {
+      print("Failed to fetch searching notebooks: ${response.body}");
+      return []; // Return an empty list if the API call fails
+    }
+  }
+
+
   static Future<void> savePublicNotebooksLocally(
       List<Notebook> notebooks) async {
     final prefs = await SharedPreferences.getInstance();
@@ -278,9 +434,16 @@ class AuthService {
     return [];
   }
 
-  static Future<void> fetchReminders(String token) async {
-    final url = Uri.parse(
-        'https://timely.pythonanywhere.com/api/v1/remainders/');
+  static Future<void> fetchReminders(String token, {int? pageNumber}) async {
+    final Uri url;
+    if (pageNumber == null || pageNumber == 1) {
+      url = Uri.parse(
+          'https://timely.pythonanywhere.com/api/v1/remainders/');
+    } else {
+      url = Uri.parse(
+          'https://timely.pythonanywhere.com/api/v1/remainders/?page=$pageNumber');
+    }
+
     final response = await http.get(
       url,
       headers: {

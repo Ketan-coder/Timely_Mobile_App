@@ -203,7 +203,7 @@ class _RemindersPageState extends State<RemindersPage> {
           body: formatReminderBody(reminderName),
           scheduledDate: alertTime,
           channelId: 'reminder_channel',
-          channelName: 'Reminder Notifications',
+          channelName: 'Reminders',
           channelDescription: 'Channel for reminder notifications',
         );
         final alarmService = AlarmService();

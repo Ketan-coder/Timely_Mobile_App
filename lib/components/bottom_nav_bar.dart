@@ -27,6 +27,13 @@ class _BottomNavBarState extends State<BottomNavBar> {
     const ProfilePage(),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex =
+        widget.currentIndex; // Initialize with the widget's currentIndex
+  }
+
   void _onTabTapped(int index) {
     setState(() {
       _currentIndex = index;

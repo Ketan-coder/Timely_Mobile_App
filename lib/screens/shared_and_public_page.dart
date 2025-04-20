@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
+import '../components/text_field.dart';
 import '../models/notebook.dart';
 import 'login_screen.dart';
 import 'notebook_detail_page.dart';
@@ -118,9 +119,9 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
             controller: _tabController,
             children: [
               SharedTab(sharedNotebooks: _sharedNotebooks,
-                  isRefreshing: _isRefreshing),
+                  isRefreshing: _isRefreshing, token: _token),
               PublicTab(publicNotebooks: _publicNotebooks,
-                  isRefreshing: _isRefreshing)
+                  isRefreshing: _isRefreshing, token: _token)
             ],
           ),
           if (_isRefreshing) const Center(child: CircularProgressIndicator()),
@@ -185,10 +186,11 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
 class SharedTab extends StatefulWidget {
   final List<Map<String, dynamic>> sharedNotebooks;
   final bool isRefreshing;
+  String? token;
 
   //SharedTab({super.key, required this.sharedNotebooks});
   SharedTab(
-      {Key? key, required this.sharedNotebooks, required this.isRefreshing})
+      {Key? key, required this.sharedNotebooks, required this.isRefreshing, required this.token})
       : super(key: key);
 
   @override
@@ -196,6 +198,9 @@ class SharedTab extends StatefulWidget {
 }
 
 class _SharedTabState extends State<SharedTab> {
+  final TextEditingController _searchSharedNotebook = TextEditingController();
+  List<Notebook> _searchedSharedNotebooks = [];
+  bool _isSearching = false;
 
   String _formatDateTime(String dateTimeString) {
     try {
@@ -271,6 +276,48 @@ class _SharedTabState extends State<SharedTab> {
                 ],
               ),
             ),
+            SliverToBoxAdapter( // Added SliverToBoxAdapter for the search bar
+              child: Container(
+                margin: const EdgeInsets.symmetric(
+                    vertical: 8.0, horizontal: 5.0),
+                child: MyTextField(
+                  controller: _searchSharedNotebook,
+                  height: 18,
+                  hintTexts: const [
+                    'Search Shared notebooks',
+                    'Search Description',
+                    'Search pages and Subpages'
+                  ],
+                  // Provide a list of hints
+                  hintext: 'Search',
+                  obscuretext: false,
+                  maxlines: 1,
+                  prefixicon: const Icon(Icons.search),
+                  width: 80,
+                  onChanged: (searchText) async {
+                    setState(() {
+                      _isSearching = searchText.isNotEmpty;
+                      _searchedSharedNotebooks = []; // Clear previous results
+                    });
+                    if (searchText.isNotEmpty) {
+                      List<Notebook> results = await auth_service.AuthService
+                          .searchSharedNotebooks(widget.token!, searchText);
+                      setState(() {
+                        _searchedSharedNotebooks = results;
+                      });
+                      print(
+                          'Search results: ${_searchedSharedNotebooks.length}');
+                    } else {
+                      print('Search text is empty');
+                      setState(() {
+                        _searchedSharedNotebooks = [];
+                        _isSearching = false;
+                      });
+                    }
+                  },
+                ),
+              ),
+            ),
             if (widget.isRefreshing)
               const SliverToBoxAdapter(
                 child: Center(
@@ -283,47 +330,56 @@ class _SharedTabState extends State<SharedTab> {
             SliverList(
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final notebook = widget.sharedNotebooks[index];
-                      bool isProtected = notebook['is_password_protected'] ??
-                          false;
-                      return Padding(
-                        padding: const EdgeInsets.only(
-                            top: 10, left: 5, right: 5),
-                        child: ListTile(
-                          textColor: Theme
-                              .of(context)
-                              .colorScheme
-                              .surface,
-                          title: Text(notebook['title'] ?? 'Untitled',
-                            style: TextStyle(color: Theme
-                                .of(context)
-                                .colorScheme
-                                .primary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                fontFamily: 'Sora'),),
-                          subtitle: Text(
-                              '${_formatDateTime(notebook['updated_at'])}'),
-                          leading: Icon(Icons.book, color: Theme
-                              .of(context)
-                              .colorScheme
-                              .tertiary,),
-                          trailing: isProtected
-                              ? const Icon(Icons.lock, color: Colors.red)
-                              : const SizedBox(),
-                          onTap: () async {
-                            //await _showPasswordInputDialog(
-                            //    context, notebook['id'], notebook['title'],
-                            //    notebook['password'].toString(), isProtected);
-                            Navigator.of(context).push(createRoute(
-                                NotebookDetailPage(
-                                    notebookId: notebook['id'],
-                                    isPasswordProtected: isProtected)));
-                          },
-                        ),
-                      );
+                  //final notebook = widget.sharedNotebooks[index];
+                  final notebook;
+                  if (_isSearching) {
+                    notebook = _searchedSharedNotebooks[index];
+                  } else {
+                    notebook = Notebook.fromJson(widget.sharedNotebooks[index]);
+                  }
+                  bool isProtected = notebook.isPasswordProtected ??
+                      false;
+                  return Padding(
+                    padding: const EdgeInsets.only(
+                        top: 10, left: 5, right: 5),
+                    child: ListTile(
+                      textColor: Theme
+                          .of(context)
+                          .colorScheme
+                          .surface,
+                      title: Text(notebook.title ?? 'Untitled',
+                        style: TextStyle(color: Theme
+                            .of(context)
+                            .colorScheme
+                            .primary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Sora'),),
+                      subtitle: Text(
+                          '${_formatDateTime((notebook.updatedAt)
+                              .toString())}'),
+                      leading: Icon(Icons.book, color: Theme
+                          .of(context)
+                          .colorScheme
+                          .tertiary,),
+                      trailing: isProtected
+                          ? const Icon(Icons.lock, color: Colors.red)
+                          : const SizedBox(),
+                      onTap: () async {
+                        //await _showPasswordInputDialog(
+                        //    context, notebook['id'], notebook['title'],
+                        //    notebook['password'].toString(), isProtected);
+                        Navigator.of(context).push(createRoute(
+                            NotebookDetailPage(
+                                notebookId: notebook.id,
+                                isPasswordProtected: isProtected)));
+                      },
+                    ),
+                  );
                 },
-                childCount: widget.sharedNotebooks.length,
+                childCount: _isSearching
+                    ? _searchedSharedNotebooks.length
+                    : widget.sharedNotebooks.length,
               ),
             ),
           ],
@@ -336,15 +392,20 @@ class _SharedTabState extends State<SharedTab> {
 class PublicTab extends StatefulWidget {
   List<Map<String, dynamic>> publicNotebooks;
   final bool isRefreshing;
+  String? token;
 
   PublicTab(
-      {super.key, required this.publicNotebooks, required this.isRefreshing});
+      {super.key, required this.publicNotebooks, required this.isRefreshing, required this.token});
 
   @override
   State<PublicTab> createState() => _PublicTabState();
 }
 
 class _PublicTabState extends State<PublicTab> {
+  final TextEditingController _searchController = TextEditingController();
+  List<Notebook> _searchedNotebooks = [];
+  bool _isSearching = false;
+
   String _formatDateTime(String dateTimeString) {
     try {
       DateTime dateTime = DateTime.parse(dateTimeString);
@@ -406,7 +467,10 @@ class _PublicTabState extends State<PublicTab> {
                             "Public\nNotebooks",
                             style: TextStyle(
                               color:
-                                  Theme.of(context).colorScheme.primary ??
+                              Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary ??
                                   Colors.white,
                               fontSize: 48,
                               fontWeight: FontWeight.w700,
@@ -417,6 +481,47 @@ class _PublicTabState extends State<PublicTab> {
                     ),
                   ),
                 ],
+              ),
+            ),
+            SliverToBoxAdapter( // Added SliverToBoxAdapter for the search bar
+              child: Container(
+                margin: const EdgeInsets.symmetric(
+                    vertical: 8.0, horizontal: 5.0),
+                child: MyTextField(
+                  controller: _searchController,
+                  height: 18,
+                  hintTexts: const [
+                    'Search Public notebooks',
+                    'Search Description',
+                    'Search pages and Subpages'
+                  ],
+                  // Provide a list of hints
+                  hintext: 'Search',
+                  obscuretext: false,
+                  maxlines: 1,
+                  prefixicon: const Icon(Icons.search),
+                  width: 80,
+                  onChanged: (searchText) async {
+                    setState(() {
+                      _isSearching = searchText.isNotEmpty;
+                      _searchedNotebooks = []; // Clear previous results
+                    });
+                    if (searchText.isNotEmpty) {
+                      List<Notebook> results = await auth_service.AuthService
+                          .searchPublicNotebooks(widget.token!, searchText);
+                      setState(() {
+                        _searchedNotebooks = results;
+                      });
+                      print('Search results: ${_searchedNotebooks.length}');
+                    } else {
+                      print('Search text is empty');
+                      setState(() {
+                        _searchedNotebooks = [];
+                        _isSearching = false;
+                      });
+                    }
+                  },
+                ),
               ),
             ),
             if (widget.isRefreshing)
@@ -431,50 +536,59 @@ class _PublicTabState extends State<PublicTab> {
             SliverList(
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      final notebook = widget.publicNotebooks[index];
-                      bool isProtected = notebook['is_password_protected'] ??
-                          false;
-                      return Padding(
-                        padding: const EdgeInsets.only(
-                            top: 10, left: 5, right: 5),
-                        child: ListTile(
-                          textColor: Theme
-                              .of(context)
-                              .colorScheme
-                              .surface,
-                          title: Text(notebook['title'] ?? 'Untitled',
-                            style: TextStyle(color: Theme
-                                .of(context)
-                                .colorScheme
-                                .primary,
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                fontFamily: 'Sora'),),
-                          subtitle: Text(
-                              '${_formatDateTime(notebook['updated_at'])}'),
-                          leading: Icon(Icons.book, color: Theme
-                              .of(context)
-                              .colorScheme
-                              .tertiary,),
-                          trailing: isProtected
-                              ? const Icon(Icons.lock, color: Colors.red)
-                              : const SizedBox(),
-                          onTap: () async {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    NotebookDetailPage(
-                                      notebookId: notebook['id'],
-                                      isPasswordProtected: isProtected,
-                                    ),
-                              ),
-                            );
-                          },
-                        ),
-                      );
+                  final notebook;
+                  if (_isSearching) {
+                    notebook = _searchedNotebooks[index];
+                  } else {
+                    //notebook = widget.publicNotebooks[index];
+                    notebook = Notebook.fromJson(widget.publicNotebooks[index]);
+                  }
+                  print('Notebook Data ==> $notebook');
+                  //bool isProtected = notebook['is_password_protected'] ?? false;
+                  bool isProtected = notebook.isPasswordProtected ?? false;
+                  return Padding(
+                    padding: const EdgeInsets.only(
+                        top: 10, left: 5, right: 5),
+                    child: ListTile(
+                      textColor: Theme
+                          .of(context)
+                          .colorScheme
+                          .surface,
+                      title: Text(notebook.title ?? 'Untitled',
+                        style: TextStyle(color: Theme
+                            .of(context)
+                            .colorScheme
+                            .primary,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'Sora'),),
+                      subtitle: Text(
+                          '${_formatDateTime((notebook.updatedAt)
+                              .toString())}'),
+                      leading: Icon(Icons.book, color: Theme
+                          .of(context)
+                          .colorScheme
+                          .tertiary,),
+                      trailing: isProtected
+                          ? const Icon(Icons.lock, color: Colors.red)
+                          : const SizedBox(),
+                      onTap: () async {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                NotebookDetailPage(
+                                  notebookId: notebook.id,
+                                  isPasswordProtected: isProtected,
+                                ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
                 },
-                childCount: widget.publicNotebooks.length,
+                childCount: _isSearching ? _searchedNotebooks.length : widget
+                    .publicNotebooks.length,
               ),
             ),
           ],

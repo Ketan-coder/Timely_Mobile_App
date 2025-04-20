@@ -6,7 +6,7 @@ import 'package:timely/auth/auth_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
-// ✅ This class handles manually tracked notifications
+//  This class handles manually tracked notifications
 class _PendingNotification {
   final int id;
   final String title;
@@ -235,44 +235,52 @@ class NotificationService {
       final now = DateTime.now();
       for (var n in _manualNotifications) {
         if (!n.isShown && n.scheduledDate.isBefore(now)) {
-          final isCompleted = await AuthService.checkIfReminderIsCompleted(n.id);
+          final isCompleted = await AuthService.checkIfReminderIsCompleted(
+              n.id);
           print('[MANUAL] Checking reminder ${n.id} status...');
-          print('[MANUAL] Reminder ${n.id} status: ${isCompleted ? 'Completed' : 'Not Completed'}');
-          
+          print('[MANUAL] Reminder ${n.id} status: ${isCompleted
+              ? 'Completed'
+              : 'Not Completed'}');
+          n.channelName == "Reminders" ? print('[YES]') : print('[NO]');
           // If the reminder is not completed, show the notification
           if (!isCompleted) {
-          await _notificationsPlugin.show(
-            n.id,
-            n.title,
-            n.body,
-            NotificationDetails(
-              android: AndroidNotificationDetails(
-                n.channelId,
-                n.channelName,
-                channelDescription: n.channelDescription,
-                importance: Importance.max,
-                priority: Priority.high,
-                enableVibration: true,
-                vibrationPattern: Int64List.fromList([0, 500, 200, 500]), // Custom vibration pattern
-                playSound: true,
-                actions: [
-                  // AndroidNotificationAction(
-                  //   'Complete',
-                  //   'Complete',
-                  //   showsUserInterface: true,
-                  // ),
-                  AndroidNotificationAction(
-                    'DISMISS',
-                    'Dismiss',
-                    showsUserInterface: true,
-                  ),
-                ],
+            await _notificationsPlugin.show(
+              n.id,
+              n.title,
+              n.body,
+              NotificationDetails(
+                android: AndroidNotificationDetails(
+                  n.channelId,
+                  n.channelName,
+                  channelDescription: n.channelDescription,
+                  importance: Importance.max,
+                  priority: Priority.high,
+                  showWhen: n.channelName == "Reminders" ? true : false,
+                  ongoing: n.channelName == "Reminders" ? true : false,
+                  autoCancel: n.channelName == "Reminders" ? false : true,
+                  enableVibration: n.channelName == "Reminders" ? true : false,
+                  vibrationPattern: Int64List.fromList([0, 500, 200, 500]),
+                  // Custom vibration pattern
+                  playSound: n.channelName == "Reminders" ? true : false,
+                  category: AndroidNotificationCategory.reminder,
+                  actions: [
+                    // AndroidNotificationAction(
+                    //   'Complete',
+                    //   'Complete',
+                    //   showsUserInterface: true,
+                    // ),
+                    AndroidNotificationAction(
+                      'DISMISS',
+                      'Dismiss',
+                      showsUserInterface: true,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          );
-          print('[MANUAL] Notification shown → ID: ${n.id}');
-          n.isShown = true;
-        } else {
+            );
+            print('[MANUAL] Notification shown → ID: ${n.id}');
+            n.isShown = true;
+          } else {
           print('[MANUAL] Reminder ${n.id} already completed. Skipping...');
           n.isShown = true;
         }

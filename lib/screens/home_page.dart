@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:timely/components/button.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
+import '../components/bottom_nav_bar.dart';
 import '../components/custom_page_animation.dart';
 import '../components/custom_snack_bar.dart';
+import '../components/text_field.dart';
 import '../models/notebook.dart';
 import 'login_screen.dart';
 import 'package:crypto/crypto.dart';
@@ -24,11 +27,14 @@ class _HomePageState extends State<HomePage> {
   bool _isRefreshing = false;
   String? _token; // Store token
   Timer? _updateTimer;
+  List<Notebook> _filteredNotebooks = [];
 
   @override
   void initState() {
     super.initState();
     _initializeData();
+    _filteredNotebooks =
+        _notebooks.map((map) => Notebook.fromJson(map)).toList();
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -100,10 +106,6 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _showPasswordInputDialog(BuildContext context, int notebookID, String notebookName, String realPasswordHash, bool isPasswordProtected) async {
     if (!isPasswordProtected) {
-      //Navigator.push(
-      //  context,
-      //  MaterialPageRoute(builder: (context) => NotebookDetailPage(notebookId: notebookID)),
-      //);
       Navigator.of(context).push(createRoute(NotebookDetailPage(
           notebookId: notebookID, isPasswordProtected: isPasswordProtected)));
       return; // Stop execution, no need to show password dialog
@@ -167,7 +169,8 @@ class _HomePageState extends State<HomePage> {
                           isError: true, isTop: true);
                     }
                   },
-                  child: const Text("Proceed", style: TextStyle(color: Colors.green)),
+                  child: const Text(
+                      "Proceed", style: TextStyle(color: Colors.green)),
                 ),
               ],
             );
@@ -177,9 +180,54 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  List<Notebook> _searchedNotebooks = [];
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String? _filterWith;
+
+  void _filterNotebooks() {
+    setState(() {
+      if (_filterWith == 'lockedNotebooks') {
+        _filteredNotebooks = _notebooks
+            .map((map) => Notebook.fromJson(map))
+            .where((notebook) => notebook.isPasswordProtected == true)
+            .toList();
+      } else if (_filterWith == 'favouriteNotebooks') {
+        // Assuming you have an 'isFavourite' property in your Notebook model
+        _filteredNotebooks = _notebooks
+            .map((map) => Notebook.fromJson(map))
+            .where((notebook) => notebook.isFavourite == true)
+            .toList();
+      } else if (_filterWith == 'high') {
+        // Assuming you have a 'priority' property in your Notebook model (e.g., 'high', 'medium', 'low')
+        _filteredNotebooks = _notebooks
+            .map((map) => Notebook.fromJson(map))
+            .where((notebook) =>
+        notebook.priority == 0 || notebook.priority == 1)
+            .toList();
+      } else if (_filterWith == 'low') {
+        _filteredNotebooks = _notebooks
+            .map((map) => Notebook.fromJson(map))
+            .where((notebook) =>
+        notebook.priority == 4 || notebook.priority == 5)
+            .toList();
+      } else if (_filterWith == 'all') {
+        // If no filter is selected or an invalid filter, show all notebooks
+        _filteredNotebooks =
+            _notebooks.map((map) => Notebook.fromJson(map)).toList();
+      } else {
+        // If no filter is selected or an invalid filter, show all notebooks
+        _filteredNotebooks =
+            _notebooks.map((map) => Notebook.fromJson(map)).toList();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final Brightness brightness = Theme.of(context).brightness;
+    final Brightness brightness = Theme
+        .of(context)
+        .brightness;
     final bool isDarkMode = brightness == Brightness.dark;
     print("Is Dark Mode: $isDarkMode");
     final imageUrl = !isDarkMode
@@ -299,6 +347,113 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
+              SliverToBoxAdapter( // Added SliverToBoxAdapter for the search bar
+                child: Container(
+                  margin: const EdgeInsets.symmetric(
+                      vertical: 8.0, horizontal: 5.0),
+                  child: MyTextField(
+                    controller: _searchController,
+                    height: 18,
+                    hintTexts: const [
+                      'Search notebooks',
+                      'Search Description',
+                      'Search pages and Subpages'
+                    ],
+                    // Provide a list of hints
+                    hintext: 'Search',
+                    obscuretext: false,
+                    maxlines: 1,
+                    prefixicon: const Icon(Icons.search),
+                    width: 80,
+                    onChanged: (searchText) async {
+                      setState(() {
+                        _isSearching = searchText.isNotEmpty;
+                        _searchedNotebooks = []; // Clear previous results
+                      });
+                      if (searchText.isNotEmpty) {
+                        List<Notebook> results = await auth_service.AuthService
+                            .searchNotebooks(_token!, searchText);
+                        setState(() {
+                          _searchedNotebooks = results;
+                        });
+                        print('Search results: ${_searchedNotebooks.length}');
+                      } else {
+                        print('Search text is empty');
+                        setState(() {
+                          _searchedNotebooks = [];
+                          _isSearching = false;
+                        });
+                      }
+                    },
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Container(
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 2.0, horizontal: 2.0),
+                      padding: EdgeInsets.only(left: 15.0),
+                      child: Row(
+                        children: [
+                          MyButton(onPressed: () {
+                            setState(() {
+                              _filterWith = 'all';
+                              _filterNotebooks();
+                            });
+                          },
+                              text: 'All Notebooks',
+                              isSmall: true,
+                              isGhost: _filterWith != 'all'),
+                          MyButton(onPressed: () {
+                            Navigator.push(context,
+                                createRoute(BottomNavBar(currentIndex: 3)));
+                          },
+                              text: 'Shared Notebooks',
+                              isSmall: true,
+                              isGhost: true),
+                          MyButton(onPressed: () {
+                            setState(() {
+                              _filterWith = 'lockedNotebooks';
+                              _filterNotebooks();
+                            });
+                          },
+                              text: 'Locked Notebooks',
+                              isSmall: true,
+                              isGhost: _filterWith != 'lockedNotebooks'),
+                          MyButton(onPressed: () {
+                            setState(() {
+                              _filterWith = 'favouriteNotebooks';
+                              _filterNotebooks();
+                            });
+                          },
+                              text: 'Favourite Notebooks',
+                              isSmall: true,
+                              isGhost: _filterWith != 'favouriteNotebooks'),
+                          MyButton(onPressed: () {
+                            setState(() {
+                              _filterWith = 'high';
+                              _filterNotebooks();
+                            });
+                          },
+                              text: 'Highest Priority',
+                              isSmall: true,
+                              isGhost: _filterWith != 'high'),
+                          MyButton(onPressed: () {
+                            setState(() {
+                              _filterWith = 'low';
+                              _filterNotebooks();
+                            });
+                          },
+                              text: 'Lowest Priority',
+                              isSmall: true,
+                              isGhost: _filterWith != 'low'),
+                        ],
+                      )
+                  ),
+                ),
+              ),
               if (_isRefreshing)
                 const SliverToBoxAdapter(
                   child: Center(
@@ -311,52 +466,66 @@ class _HomePageState extends State<HomePage> {
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final notebook = _notebooks[index];
-                        bool isProtected = notebook['is_password_protected'] ??
-                            false;
-                        return Padding(
-                          padding: const EdgeInsets.only(
-                              top: 8, left: 5, right: 5),
-                          child: ListTile(
-                            textColor: Theme
-                                .of(context)
-                                .colorScheme
-                                .surface,
-                            title: Text(notebook['title'] ?? 'Untitled',
-                              style: TextStyle(color: Theme
-                                  .of(context)
-                                  .colorScheme
-                                  .primary,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  fontFamily: 'Sora'),),
-                            subtitle: Text(
-                                '${_formatDateTime(notebook['updated_at'])}'),
-                            leading: Icon(Icons.book, color: Theme
-                                .of(context)
-                                .colorScheme
-                                .tertiary,),
-                            trailing: isProtected
-                                ? const Icon(Icons.lock, color: Colors.red)
-                                : const SizedBox(),
-                            onTap: () async {
-                              await _showPasswordInputDialog(
-                                  context, notebook['id'], notebook['title'],
-                                  notebook['password'].toString(), isProtected);
-                              // Navigator.push(
-                              //   context,
-                              //   MaterialPageRoute(
-                              //     builder: (context) => NotebookDetailPage(
-                              //       notebookId: notebook['id'],
-                              //       isPasswordProtected: isProtected,
-                              //     ),
-                              //   ),
-                              // );
-                            },
-                          ),
-                        );
+                    final notebook;
+                    final _filterNotebook;
+                    if (_isSearching) {
+                      notebook = _searchedNotebooks[index];
+                    } else if (_filterWith != null) {
+                      notebook = _filteredNotebooks[index];
+                    }
+                    else {
+                      notebook = Notebook.fromJson(_notebooks[index]);
+                    }
+                    //final notebook = _notebooks[index];
+                    bool isProtected = notebook.isPasswordProtected ??
+                        false;
+                    return Padding(
+                      padding: const EdgeInsets.only(
+                          top: 8, left: 5, right: 5),
+                      child: ListTile(
+                        textColor: Theme
+                            .of(context)
+                            .colorScheme
+                            .surface,
+                        title: Text(notebook.title ?? 'Untitled',
+                          style: TextStyle(color: Theme
+                              .of(context)
+                              .colorScheme
+                              .primary,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              fontFamily: 'Sora'),),
+                        subtitle: Text(
+                            '${_formatDateTime(
+                                (notebook.updatedAt).toString())}'),
+                        leading: Icon(Icons.book, color: Theme
+                            .of(context)
+                            .colorScheme
+                            .tertiary,),
+                        trailing: isProtected
+                            ? const Icon(Icons.lock, color: Colors.red)
+                            : const SizedBox(),
+                        onTap: () async {
+                          await _showPasswordInputDialog(
+                              context, notebook.id, notebook.title,
+                              notebook.password.toString(), isProtected);
+                          // Navigator.push(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //     builder: (context) => NotebookDetailPage(
+                          //       notebookId: notebook['id'],
+                          //       isPasswordProtected: isProtected,
+                          //     ),
+                          //   ),
+                          // );
+                        },
+                      ),
+                    );
                   },
-                  childCount: _notebooks.length,
+                  childCount: _filterWith != null
+                      ? _filteredNotebooks.length
+                      : _isSearching ? _searchedNotebooks.length : _notebooks
+                      .length,
                 ),
               ),
             ],
