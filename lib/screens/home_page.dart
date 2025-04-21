@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_animated_icons/icons8.dart';
+import 'package:lottie/lottie.dart';
 import 'package:timely/components/button.dart';
+import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
@@ -21,19 +24,24 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _notebooks = [];
   final double _titleOpacity = 1.0; // Controls title visibility
   bool _isRefreshing = false;
   String? _token; // Store token
   Timer? _updateTimer;
   List<Notebook> _filteredNotebooks = [];
+  late AnimationController _bookController;
+
 
   @override
   void initState() {
     super.initState();
     _initializeData();
-
+    _bookController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    )..repeat();
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -45,6 +53,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _bookController.dispose();
     super.dispose();
   }
 
@@ -458,14 +467,10 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               if (_isRefreshing)
-                const SliverToBoxAdapter(
-                  child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                  ),
+                SliverToBoxAdapter(
+                  child: CustomLoadingElement(bookController: _bookController,backgroundColor: Theme.of(context).colorScheme.primary,)
                 ),
+
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                       (context, index) {
@@ -481,6 +486,9 @@ class _HomePageState extends State<HomePage> {
                     //final notebook = _notebooks[index];
                     bool isProtected = notebook.isPasswordProtected ??
                         false;
+                    bool isPublic = notebook.isPublic ?? false;
+                    bool isFavourite = notebook.isFavourite ?? false;
+                    bool isShared = notebook.isShared ?? false;
                     return Padding(
                       padding: const EdgeInsets.only(
                           top: 8, left: 5, right: 5),
@@ -505,8 +513,11 @@ class _HomePageState extends State<HomePage> {
                             .colorScheme
                             .tertiary,),
                         trailing: isProtected
-                            ? const Icon(Icons.lock, color: Colors.red)
-                            : const SizedBox(),
+                            ? Icon(Icons.lock, color: Theme.of(context).colorScheme.primary) 
+                            : isPublic ? Icon(Icons.public, color: Colors.green) 
+                            : isFavourite ? Icon(Icons.favorite, color: Colors.red) 
+                            : isShared ? Icon(Icons.share, color: Colors.blue)
+                            : SizedBox(),
                         onTap: () async {
                           await _showPasswordInputDialog(
                               context, notebook.id, notebook.title,

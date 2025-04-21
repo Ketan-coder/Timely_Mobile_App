@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/notification_test_screen.dart';
 import 'package:timely/services/alarm_service.dart';
 
@@ -20,11 +22,12 @@ class RemindersPage extends StatefulWidget {
   State<RemindersPage> createState() => _RemindersPageState();
 }
 
-class _RemindersPageState extends State<RemindersPage> {
+class _RemindersPageState extends State<RemindersPage> with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _reminders = [];
   final double _titleOpacity = 1.0; // Controls title visibility
   bool _isRefreshing = false;
   String? _token; // Store token
+  late AnimationController _bellController;
 
   String formatReminderBody(String task) {
     final shortTemplates = [
@@ -55,7 +58,10 @@ class _RemindersPageState extends State<RemindersPage> {
   void initState() {
     super.initState();
     _initializeData();
-    
+    _bellController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat();
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -67,6 +73,7 @@ class _RemindersPageState extends State<RemindersPage> {
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _bellController.dispose();
     super.dispose();
   }
 
@@ -607,14 +614,9 @@ class _RemindersPageState extends State<RemindersPage> {
               ),
             ),
             if (_isRefreshing)
-              const SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+                SliverToBoxAdapter(
+                  child: CustomLoadingElement(bookController: _bellController,backgroundColor: Theme.of(context).colorScheme.primary,icon: Icons8.bell,)
                 ),
-              ),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                     (context, index) {

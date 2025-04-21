@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
 import 'package:timely/auth/auth_service.dart' as auth_service;
+import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/models/todo.dart';
 import 'package:timely/screens/login_screen.dart';
 import 'package:intl/intl.dart';
@@ -14,16 +16,21 @@ class TodoPage extends StatefulWidget {
   State<TodoPage> createState() => _TodoPageState();
 }
 
-class _TodoPageState extends State<TodoPage> {
+class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _todos = [];
   final double _titleOpacity = 1.0; // Controls title visibility
   bool _isRefreshing = false;
   String? _token;
+  late AnimationController _todoController;
 
   @override
   void initState() {
     super.initState();
     _initializeData();
+    _todoController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat();
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -35,6 +42,7 @@ class _TodoPageState extends State<TodoPage> {
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _todoController.dispose();
     super.dispose();
   }
 
@@ -364,14 +372,9 @@ class _TodoPageState extends State<TodoPage> {
                   ),
                 ),
                 if (_isRefreshing)
-                  const SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    ),
-                  ),
+                SliverToBoxAdapter(
+                  child: CustomLoadingElement(bookController: _todoController,backgroundColor: Theme.of(context).colorScheme.primary,icon: Icons8.tasks,)
+                ),
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                         (context, index) {
