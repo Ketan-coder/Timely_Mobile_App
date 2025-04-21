@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
+import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
@@ -16,6 +17,7 @@ import 'login_screen.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -235,16 +237,89 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     });
   }
 
+  Future<void> toggleIsPublic(int notebookID, bool currentStatus) async {
+    // If making it public, ask for confirmation
+    if (!currentStatus) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+          title: const Text("Make Public?"),
+          content: const Text(
+            "Are you sure you want to make this notebook public?\n\n"
+            "Anyone on the platform will be able to access it.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all<Color>(
+                  Theme.of(context).colorScheme.errorContainer,
+                ),
+                foregroundColor: WidgetStateProperty.all<Color>(
+                  Theme.of(context).colorScheme.error,
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Yes, Make Public"),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return; // User cancelled
+    }
+
+    final url = Uri.parse(
+      'https://timely.pythonanywhere.com/api/v1/notebooks/$notebookID/',
+    );
+
+    final response = await http.patch(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $_token',
+      },
+      body: jsonEncode({'is_public': !currentStatus}),
+    );
+
+    if (response.statusCode == 200) {
+      showAnimatedSnackBar(
+        context,
+        !currentStatus
+            ? "This notebook is now public. Anyone on the platform can access it!"
+            : "This notebook is now private. Only you can access it.",
+        isSuccess: true,
+        isTop: true,
+      );
+
+      setState(() {
+        _notebooks = _notebooks.map((notebook) {
+          if (notebook['id'] == notebookID) {
+            notebook['is_public'] = !currentStatus;
+          }
+          return notebook;
+        }).toList();
+      });
+
+      _initializeData();
+    } else {
+      showAnimatedSnackBar(
+        context,
+        "Failed to update visibility. Please try again.",
+        isError: true,
+        isTop: true,
+      );
+    }
+  }
+
+
+
   @override
   Widget build(BuildContext context) {
-    final Brightness brightness = Theme
-        .of(context)
-        .brightness;
-    final bool isDarkMode = brightness == Brightness.dark;
-    print("Is Dark Mode: $isDarkMode");
-    final imageUrl = !isDarkMode
-        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
-        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
 
     return Scaffold(
       backgroundColor: Theme
@@ -470,66 +545,93 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 SliverToBoxAdapter(
                   child: CustomLoadingElement(bookController: _bookController,backgroundColor: Theme.of(context).colorScheme.primary,)
                 ),
-
               SliverList(
                 delegate: SliverChildBuilderDelegate(
-                      (context, index) {
+                  (context, index) {
                     final notebook;
                     if (_isSearching) {
                       notebook = _searchedNotebooks[index];
                     } else if (_filterWith != null) {
                       notebook = _filteredNotebooks[index];
-                    }
-                    else {
+                    } else {
                       notebook = Notebook.fromJson(_notebooks[index]);
                     }
-                    //final notebook = _notebooks[index];
-                    bool isProtected = notebook.isPasswordProtected ??
-                        false;
+
+                    bool isProtected = notebook.isPasswordProtected ?? false;
                     bool isPublic = notebook.isPublic ?? false;
                     bool isFavourite = notebook.isFavourite ?? false;
                     bool isShared = notebook.isShared ?? false;
+
                     return Padding(
-                      padding: const EdgeInsets.only(
-                          top: 8, left: 5, right: 5),
-                      child: ListTile(
-                        textColor: Theme
-                            .of(context)
-                            .colorScheme
-                            .surface,
-                        title: Text(notebook.title ?? 'Untitled',
-                          style: TextStyle(color: Theme
-                              .of(context)
-                              .colorScheme
-                              .primary,
+                      padding: const EdgeInsets.only(top: 8, left: 5, right: 5),
+                      child: Slidable(
+                        key: ValueKey(notebook.id),
+                        endActionPane: ActionPane(
+                          motion: const DrawerMotion(),
+                          children: [
+                            SlidableAction(
+                              onPressed: (context) => toggleIsPublic(
+                                notebook.id,
+                                isPublic,
+                              ),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                              foregroundColor: Theme.of(context).colorScheme.errorContainer,
+                              icon: isPublic ? Icons.person : Icons.public,
+                              label: isPublic ? 'Private' : 'Public',
+                            ),
+                            SlidableAction(
+                              onPressed: (context) {
+                                // Your edit logic here
+                              },
+                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              foregroundColor: Theme.of(context).colorScheme.surface,
+                              icon: isShared ? Icons.undo_sharp : Icons.share,
+                              label: isShared ? 'Un-Share' : 'Share',
+                            ),
+                          ],
+                        ),
+                        child: ListTile(
+                          textColor: Theme.of(context).colorScheme.surface,
+                          title: Text(
+                            notebook.title ?? 'Untitled',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.primary,
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
-                              fontFamily: 'Sora'),),
-                        subtitle: Text(
-                            _formatDateTime(
-                                (notebook.updatedAt).toString())),
-                        leading: Icon(Icons.book, color: Theme
-                            .of(context)
-                            .colorScheme
-                            .tertiary,),
-                        trailing: isProtected
-                            ? Icon(Icons.lock, color: Theme.of(context).colorScheme.primary) 
-                            : isPublic ? Icon(Icons.public, color: Colors.green) 
-                            : isFavourite ? Icon(Icons.favorite, color: Colors.red) 
-                            : isShared ? Icon(Icons.share, color: Colors.blue)
-                            : SizedBox(),
-                        onTap: () async {
-                          await _showPasswordInputDialog(
-                              context, notebook.id, notebook.title,
-                              notebook.password.toString(), isProtected);
-                        },
+                              fontFamily: 'Sora',
+                            ),
+                          ),
+                          subtitle: Text(_formatDateTime((notebook.updatedAt).toString())),
+                          leading: Icon(Icons.book,
+                              color: Theme.of(context).colorScheme.tertiary),
+                          trailing: isProtected
+                              ? Icon(Icons.lock,
+                                  color: Theme.of(context).colorScheme.primary)
+                              : isPublic
+                                  ? Icon(Icons.public, color: Colors.green)
+                                  : isFavourite
+                                      ? Icon(Icons.favorite, color: Colors.red)
+                                      : isShared
+                                          ? Icon(Icons.share, color: Colors.blue)
+                                          : SizedBox(),
+                          onTap: () async {
+                            await _showPasswordInputDialog(
+                              context,
+                              notebook.id,
+                              notebook.title,
+                              notebook.password.toString(),
+                              isProtected,
+                            );
+                          },
+                        ),
                       ),
                     );
-                      },
+                  },
                   childCount: _isSearching
-                      ? _searchedNotebooks.length : _filterWith != null
-                      ? _filteredNotebooks.length
-                      : _notebooks.length,
+                      ? _searchedNotebooks.length
+                      : _filterWith != null
+                          ? _filteredNotebooks.length
+                          : _notebooks.length,
                 ),
               ),
             ],
