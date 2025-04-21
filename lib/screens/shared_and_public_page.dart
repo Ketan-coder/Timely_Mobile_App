@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animated_icons/icons8.dart';
 import 'package:intl/intl.dart';
+import 'package:timely/components/custom_loading_animation.dart';
 
 import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
@@ -124,7 +126,7 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
                   isRefreshing: _isRefreshing, token: _token)
             ],
           ),
-          if (_isRefreshing) const Center(child: CircularProgressIndicator()),
+          //if (_isRefreshing) const Center(child: CircularProgressIndicator()),
         ],
       ),
       floatingActionButton: IconButton(
@@ -197,10 +199,33 @@ class SharedTab extends StatefulWidget {
   State<SharedTab> createState() => _SharedTabState();
 }
 
-class _SharedTabState extends State<SharedTab> {
+class _SharedTabState extends State<SharedTab> with SingleTickerProviderStateMixin {
   final TextEditingController _searchSharedNotebook = TextEditingController();
   List<Notebook> _searchedSharedNotebooks = [];
   bool _isSearching = false;
+  late AnimationController _bookController;
+
+  @override
+  void initState() {
+    super.initState();
+    _bookController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    )..repeat();
+    // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    //   if (_token != null) {
+    //     print("Here");
+    //     _initializeData();
+    //   }
+    // });
+  }
+
+  @override
+  void dispose() {
+    // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _bookController.dispose();
+    super.dispose();
+  }
 
   String _formatDateTime(String dateTimeString) {
     try {
@@ -319,14 +344,9 @@ class _SharedTabState extends State<SharedTab> {
               ),
             ),
             if (widget.isRefreshing)
-              const SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+              SliverToBoxAdapter(
+                  child: CustomLoadingElement(bookController: _bookController,backgroundColor: Theme.of(context).colorScheme.primary)
                 ),
-              ),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -401,10 +421,32 @@ class PublicTab extends StatefulWidget {
   State<PublicTab> createState() => _PublicTabState();
 }
 
-class _PublicTabState extends State<PublicTab> {
+class _PublicTabState extends State<PublicTab> with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   List<Notebook> _searchedNotebooks = [];
   bool _isSearching = false;
+  late AnimationController _publicController;
+  @override
+  void initState() {
+    super.initState();
+    _publicController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat();
+    // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+    //   if (_token != null) {
+    //     print("Here");
+    //     _initializeData();
+    //   }
+    // });
+  }
+
+  @override
+  void dispose() {
+    // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _publicController.dispose();
+    super.dispose();
+  }
 
   String _formatDateTime(String dateTimeString) {
     try {
@@ -525,14 +567,9 @@ class _PublicTabState extends State<PublicTab> {
               ),
             ),
             if (widget.isRefreshing)
-              const SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
+              SliverToBoxAdapter(
+                  child: CustomLoadingElement(bookController: _publicController,backgroundColor: Theme.of(context).colorScheme.primary,icon: Icons8.internet,)
                 ),
-              ),
             SliverList(
               delegate: SliverChildBuilderDelegate(
                     (context, index) {
