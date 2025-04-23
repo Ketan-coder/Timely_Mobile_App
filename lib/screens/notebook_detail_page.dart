@@ -263,17 +263,24 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     );
 
     if (response.statusCode == 200) {
-      setState(() {
-        _notebookData = jsonDecode(response.body);
-        print(_notebookData);
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _notebookData = jsonDecode(response.body);
+          //print(_notebookData);
+          _isLoading = false;
+        });
+      }
+      // setState(() {
+      //   _notebookData = jsonDecode(response.body);
+      //   print(_notebookData);
+      //   _isLoading = false;
+      // });
 
       final Map<String, dynamic> notebookData = jsonDecode(response.body);
       final List<String> subpageUuids = List<String>.from(
           notebookData['sugpages'] ?? []);
-      print("Subpages = >");
       print(subpageUuids);
+      print("Subpages = ^");
 
       if (subpageUuids.isEmpty) {
         return []; // No pages found
