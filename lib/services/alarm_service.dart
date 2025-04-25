@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -63,27 +65,28 @@ class AlarmService {
       print('Alarm Time: $alarmTime');
       print('Alarm ID: $alarmId');
       print('Callback Function: ${alarmCallback.runtimeType}');
+      if (!kIsWeb && Platform.isAndroid) {
+        bool result = await AndroidAlarmManager.oneShotAt(
+          alarmTime,
+          alarmId,
+          _alarmCallback, // Use the tear-off for the callback function
+          alarmClock: true,
+          exact: true,
+          wakeup: true,
+          rescheduleOnReboot: true,
+          allowWhileIdle: true,
+          params: <String, dynamic>{ // Pass the data as a Map
+            'title': title,
+            'body': body,
+            'alertTime': alarmTime.toIso8601String(),
+          },
+        );
 
-      bool result = await AndroidAlarmManager.oneShotAt(
-        alarmTime,
-        alarmId,
-        _alarmCallback, // Use the tear-off for the callback function
-        alarmClock: true,
-        exact: true,
-        wakeup: true,
-        rescheduleOnReboot: true,
-        allowWhileIdle: true,
-        params: <String, dynamic>{ // Pass the data as a Map
-          'title': title,
-          'body': body,
-          'alertTime': alarmTime.toIso8601String(),
-        },
-      );
-
-      if (result) {
-        print('Alarm successfully set for: $alarmTime with ID: $alarmId');
-      } else {
-        print('Failed to set alarm for: $alarmTime with ID: $alarmId');
+        if (result) {
+          print('Alarm successfully set for: $alarmTime with ID: $alarmId');
+        } else {
+          print('Failed to set alarm for: $alarmTime with ID: $alarmId');
+        }
       }
     } catch (e) {
       print('Error while setting alarm: $e');

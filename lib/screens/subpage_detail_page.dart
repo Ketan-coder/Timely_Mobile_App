@@ -3,14 +3,15 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/bottom_nav_bar.dart';
 
+import '../utils/date_formatter.dart';
+
 class SubPageDetailsPage extends StatefulWidget {
   final String subpageUuid;
-  SubPageDetailsPage({super.key,required this.subpageUuid});
+
+  SubPageDetailsPage({super.key, required this.subpageUuid});
 
   @override
   State<SubPageDetailsPage> createState() => _SubPageDetailsPageState();
@@ -139,17 +140,6 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
     }
     }
 
-    String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
-    }
-  }
-
   void _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -250,8 +240,7 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
                       ),
                     ),
                     Text(
-                      "Last Updated: ${_formatDateTime(
-                          _subpageData?['updated_at'])}",
+                      "Last Updated: ${formatDateTime(_subpageData?['updated_at'])}",
                       style: const TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,

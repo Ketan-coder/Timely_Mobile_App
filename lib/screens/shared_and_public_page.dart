@@ -7,6 +7,7 @@ import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
 import '../components/text_field.dart';
 import '../models/notebook.dart';
+import '../utils/date_formatter.dart';
 import 'login_screen.dart';
 import 'notebook_detail_page.dart';
 
@@ -86,17 +87,6 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
         context,
         MaterialPageRoute(builder: (context) => const LoginPage()),
       );
-    }
-  }
-
-  String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
     }
   }
 
@@ -225,17 +215,6 @@ class _SharedTabState extends State<SharedTab> with SingleTickerProviderStateMix
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
     _bookController.dispose();
     super.dispose();
-  }
-
-  String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
-    }
   }
 
   @override
@@ -376,8 +355,8 @@ class _SharedTabState extends State<SharedTab> with SingleTickerProviderStateMix
                             fontWeight: FontWeight.w800,
                             fontFamily: 'Sora'),),
                       subtitle: Text(
-                          '${_formatDateTime((notebook.updatedAt)
-                              .toString())}'),
+                          formatDateTime((notebook.updatedAt)
+                              .toString())),
                       leading: Icon(Icons.book, color: Theme
                           .of(context)
                           .colorScheme
@@ -446,17 +425,6 @@ class _PublicTabState extends State<PublicTab> with SingleTickerProviderStateMix
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
     _publicController.dispose();
     super.dispose();
-  }
-
-  String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
-    }
   }
 
   @override
@@ -600,8 +568,8 @@ class _PublicTabState extends State<PublicTab> with SingleTickerProviderStateMix
                             fontWeight: FontWeight.w800,
                             fontFamily: 'Sora'),),
                       subtitle: Text(
-                          '${_formatDateTime((notebook.updatedAt)
-                              .toString())}'),
+                          formatDateTime((notebook.updatedAt)
+                              .toString())),
                       leading: Icon(Icons.book, color: Theme
                           .of(context)
                           .colorScheme

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timely/auth/user_details_service.dart';
 import 'package:timely/components/custom_page_animation.dart';
 import 'package:timely/components/custom_snack_bar.dart';
-import 'package:timely/components/labels.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/page_detail_page.dart';
 import 'package:timely/screens/subpage_detail_page.dart';
@@ -12,16 +12,27 @@ import '../auth/auth_service.dart' as auth_service;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../components/bottom_nav_bar.dart';
-import 'package:intl/intl.dart';
+
+import '../utils/date_formatter.dart';
 
 class NotebookDetailPage extends StatefulWidget {
   final int notebookId;
   final bool isPasswordProtected;
+  late bool canEdit;
+  late bool canDelete;
+  late bool canFavourite;
+  late bool canExportToJSON;
+  late bool canExportToPDF;
 
   NotebookDetailPage({
     super.key,
     required this.notebookId,
     this.isPasswordProtected = false,
+    this.canDelete = false,
+    this.canEdit = false,
+    this.canFavourite = false,
+    this.canExportToJSON = false,
+    this.canExportToPDF = false,
   });
 
   @override
@@ -126,6 +137,20 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
         print(_notebookData);
         _isLoading = false;
       });
+      final userDetails = await UserStorageHelper.getUserDetails();
+      if (userDetails != null &&
+          (userDetails['user_id'] == _notebookData!['author']) &&
+          widget.canEdit != true) {
+        if (mounted) {
+          setState(() {
+            widget.canEdit = true;
+            widget.canDelete = true;
+            widget.canFavourite = true;
+            widget.canExportToPDF = true;
+            widget.canExportToJSON = true;
+          });
+        }
+      }
     } else if (response.statusCode == 404) {
       setState(() {
         _errorMessage = "404 - No Notebook Found!";
@@ -585,17 +610,6 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     }
   }
 
-  String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     bool isFavourite = _notebookData?['is_favourite'] ?? false;
@@ -612,7 +626,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
             .primary,
       ),
       persistentFooterButtons: [
-        Row(
+        widget.canEdit ? Row(
           children: [
             Expanded(
               flex: 4,
@@ -690,7 +704,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
               ),
             ),
           ],
-        ),
+        ) : SizedBox(),
       ],
       floatingActionButton: FloatingActionButton(
         //check if the note is favorite or not and change the icon as needed
@@ -720,13 +734,16 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                       ),
                     ),
                     Text(
-                      "Last Updated: ${_formatDateTime(
+                      "Last Updated: ${formatDateTime(
                           _notebookData?['updated_at'])}",
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Sora',
-                        
+                        color: Theme
+                            .of(context)
+                            .colorScheme
+                            .surface,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -736,8 +753,20 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                       child: SingleChildScrollView(
                         child: Html(
                           //doNotRenderTheseTags: {'iframe','form'},
+                          style: {
+                            '*': Style(
+                              color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .surface,
+                              backgroundColor: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .inverseSurface,
+                            ),
+                          },
                           data:
-                              _notebookData?['body'] ??
+                          _notebookData?['body'] ??
                               "<p>No content available</p>",
                           onAnchorTap: (url, context, attributes) {
                             if (url != null) {

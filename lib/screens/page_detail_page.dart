@@ -4,14 +4,16 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/bottom_nav_bar.dart';
 
+import '../utils/date_formatter.dart';
+
 class PageDetailsPage extends StatefulWidget {
   final String pageUuid;
-  PageDetailsPage({super.key,required this.pageUuid});
+
+  PageDetailsPage({super.key, required this.pageUuid});
 
   @override
   State<PageDetailsPage> createState() => _PageDetailsPageState();
@@ -139,17 +141,6 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
       );
     }
     }
-
-    String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
-    }
-  }
 
     Future<List<Map<String, dynamic>>> _fetchPagesDetailsForSubpages({bool forceRefresh = false}) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -438,7 +429,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                       ),
                     ),
                     Text(
-                      "Last Updated: ${_formatDateTime(
+                      "Last Updated: ${formatDateTime(
                           _pageData?['updated_at'])}",
                       style: const TextStyle(
                         fontSize: 10,

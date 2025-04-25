@@ -13,6 +13,7 @@ import '../components/custom_page_animation.dart';
 import '../components/custom_snack_bar.dart';
 import '../components/text_field.dart';
 import '../models/notebook.dart';
+import '../utils/date_formatter.dart';
 import 'login_screen.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
@@ -99,15 +100,6 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     }
   }
 
-  String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
-    }
-  }
 
   bool _checkPassword(String inputedPassword, String realPasswordHash) {
     // Hash the entered password
@@ -591,29 +583,42 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           ],
                         ),
                         child: ListTile(
-                          textColor: Theme.of(context).colorScheme.surface,
+                          textColor: Theme
+                              .of(context)
+                              .colorScheme
+                              .surface,
                           title: Text(
                             notebook.title ?? 'Untitled',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
+                              color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary,
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
                               fontFamily: 'Sora',
                             ),
                           ),
-                          subtitle: Text(_formatDateTime((notebook.updatedAt).toString())),
+                          subtitle: Text(
+                              formatDateTime((notebook.updatedAt).toString())),
                           leading: Icon(Icons.book,
-                              color: Theme.of(context).colorScheme.tertiary),
+                              color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .tertiary),
                           trailing: isProtected
                               ? Icon(Icons.lock,
-                                  color: Theme.of(context).colorScheme.primary)
+                              color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary)
                               : isPublic
-                                  ? Icon(Icons.public, color: Colors.green)
-                                  : isFavourite
-                                      ? Icon(Icons.favorite, color: Colors.red)
-                                      : isShared
-                                          ? Icon(Icons.share, color: Colors.blue)
-                                          : SizedBox(),
+                              ? Icon(Icons.public, color: Colors.green)
+                              : isFavourite
+                              ? Icon(Icons.favorite, color: Colors.red)
+                              : isShared
+                              ? Icon(Icons.share, color: Colors.blue)
+                              : SizedBox(),
                           onTap: () async {
                             await _showPasswordInputDialog(
                               context,

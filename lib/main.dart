@@ -1,13 +1,13 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/components/bottom_nav_bar.dart';
 import 'package:timely/services/notification_service.dart';
-import 'components/custom_page_animation.dart';
 import 'screens/login_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -38,7 +38,10 @@ void main() async {
   // );
   // debugPrint('🔥 Test notification scheduled!');
 
-  await AndroidAlarmManager.initialize();
+  if (!kIsWeb && (Platform.isAndroid)) {
+    await AndroidAlarmManager.initialize();
+  }
+  //await AndroidAlarmManager.initialize();
 
   runApp(const MyApp());
 }

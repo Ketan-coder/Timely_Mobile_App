@@ -17,6 +17,7 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   bool _isRefreshing = false;
   String? _token; // Store token
+  bool isAuthenticated = false;
 
   Map<String, dynamic> _userDetails = {};
   late AnimationController _bookController;
@@ -42,11 +43,14 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     setState(() {
       _isRefreshing = true;
     });
-    final details = await UserStorageHelper.getUserDetails();
-    setState(() {
-      _userDetails = details!;
-      _isRefreshing = false;
-    });
+    isAuthenticated = await UserStorageHelper.isLoggedIn();
+    if (isAuthenticated && mounted) {
+      final details = await UserStorageHelper.getUserDetails();
+      setState(() {
+        _userDetails = details!;
+        _isRefreshing = false;
+      });
+    }
   }
 
   Future<void> _logout(BuildContext context) async {
@@ -61,10 +65,6 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final imageUrl = isDarkMode
-        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
-        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       body: NotificationListener<ScrollNotification>(
@@ -109,8 +109,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                             "Profile",
                             style: TextStyle(
                               color:
-                                  Theme.of(context).colorScheme.primary ??
-                                  Colors.white,
+                              Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary,
                               fontSize: 48,
                               fontWeight: FontWeight.w700,
                             ),
@@ -135,8 +137,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                     children: [
                       const SizedBox(width: 8),
                       Text(
-                        '${_userDetails['first_name']} ${_userDetails['last_name']}' ??
-                            '',
+                        '${_userDetails['first_name']} ${_userDetails['last_name']}',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,

@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/notification_test_screen.dart';
 import 'package:timely/services/alarm_service.dart';
@@ -12,6 +11,7 @@ import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
 import '../components/custom_snack_bar.dart';
 import '../models/reminder.dart';
+import '../utils/date_formatter.dart';
 import 'login_screen.dart';
 import 'package:timely/services/notification_service.dart';
 
@@ -110,17 +110,6 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
         context,
         MaterialPageRoute(builder: (context) => const LoginPage()),
       );
-    }
-  }
-
-  String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
     }
   }
 
@@ -505,10 +494,6 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final imageUrl = isDarkMode
-        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
-        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
     return Scaffold(
       backgroundColor: Theme
           .of(context)
@@ -600,8 +585,7 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
                               Theme
                                   .of(context)
                                   .colorScheme
-                                  .primary ??
-                                  Colors.white,
+                                  .primary,
                               fontSize: 48,
                               fontWeight: FontWeight.w700,
                             ),
@@ -657,7 +641,7 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
                                   decoration: isCompleted
                                       ? TextDecoration.lineThrough
                                       : TextDecoration.none,)) : Text(
-                                    ' ${_formatDateTime(
+                                    ' ${formatDateTime(
                                         reminder['alert_time'])}',
                                     style: TextStyle(color: Theme
                                         .of(context)

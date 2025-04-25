@@ -5,9 +5,9 @@ import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/models/todo.dart';
 import 'package:timely/screens/login_screen.dart';
-import 'package:intl/intl.dart';
 
 import '../components/custom_snack_bar.dart';
+import '../utils/date_formatter.dart';
 
 class TodoPage extends StatefulWidget {
   const TodoPage({super.key});
@@ -82,16 +82,6 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
     }
   }
 
-  String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
-    }
-  }
 
   Future<void> _toggleCompleted(int todoId, String todoName,
       bool isCompleted) async {
@@ -264,11 +254,6 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final imageUrl = isDarkMode
-        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
-        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
-
     return Scaffold(
       backgroundColor: Theme
           .of(context)
@@ -359,7 +344,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                                   color: Theme
                                       .of(context)
                                       .colorScheme
-                                      .primary ?? Colors.white,
+                                      .primary,
                                   fontSize: 48,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -396,7 +381,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                                     fontSize: 18,
                                     fontWeight: FontWeight.w800,
                                     fontFamily: 'Sora'),),
-                              subtitle: Text('Last updated: ${_formatDateTime(
+                              subtitle: Text('Last updated: ${formatDateTime(
                                   todo['updated_at'])}'),
                               trailing: IconButton(onPressed: () async {
                                 await _deleteTodo(
