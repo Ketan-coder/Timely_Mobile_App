@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
+import 'package:timely/auth/user_details_service.dart';
 import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/add_notebook.dart';
@@ -71,6 +72,14 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           _notebooks.map((map) => Notebook.fromJson(map)).toList();
       _filterWith = 'all';
       _filterNotebooks();
+      // for (var notebook in _filteredNotebooks) {
+      //   if (notebook.isShared && notebook.sharedWith != null && notebook.sharedWith!.isNotEmpty) {
+      //   // Fetch user details for the first notebook in the filtered list
+      //   await auth_service.AuthService.fetchUserByProfileId(
+      //       _token!, notebook.sharedWith[0]);
+      //   }
+      // } 
+      
     } else {
       print("Error: Authentication token is null");
     }
@@ -81,7 +90,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     try {
       List<Notebook> notebooks =
       await auth_service.AuthService.loadNotebooksFromLocal();
-
+      
       setState(() {
         _notebooks = notebooks.map((notebook) => notebook.toJson()).toList();
       });
@@ -619,6 +628,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               : isShared
                               ? Icon(Icons.share, color: Colors.blue)
                               : SizedBox(),
+                          // isThreeLine: isShared ? true : false,
                           onTap: () async {
                             await _showPasswordInputDialog(
                               context,
