@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timely/models/shared_notebook.dart';
 import 'package:timely/models/todo.dart';
 
 import '../models/notebook.dart';
@@ -98,52 +99,57 @@ class AuthService {
     }
   }
 
-  //TODO: Complete this function
-  //static Future<void> fetchSharedNotebooksCanBeEdited(String token, int notebookAuthorId) async {
-  //  final url = Uri.parse(
-  //      'https://timely.pythonanywhere.com/api/v1/sharednotebooks/').replace(
-  //      queryParameters: {'search': 'True'});
-  //  final response = await http.get(
-  //    url,
-  //    headers: {
-  //      'Content-Type': 'application/json',
-  //      'Authorization': 'Token $token',
-  //    },
-  //  );
-  //
-  //  print("Raw API Response: ${response.body}"); // Debugging
-  //
-  //  if (response.statusCode == 200) {
-  //    try {
-  //      final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-  //
-  //      // Validate 'results' key exists and is a list
-  //      if (!jsonResponse.containsKey('results') ||
-  //          jsonResponse['results'] is! List) {
-  //        print("Error: 'results' key missing or not a List in response");
-  //        return;
-  //      }
-  //
-  //      final List<dynamic> data = jsonResponse['results'];
-  //
-  //      print("Shared Notebooks fetched successfully!");
-  //      print("Shared Notebooks Data ==> ${jsonEncode(data)}");
-  //
-  //      // Ensure items in 'data' are maps before conversion
-  //      List<SharedNotebook> sharednotebooks = data
-  //          .where((item) => item is Map<String, dynamic>)
-  //          .map((item) => SharedNotebook.fromJson(item as Map<String, dynamic>))
-  //          .toList();
-  //
-  //      // Store notebooks locally
-  //      await saveSharedNotebooksCanBeEditedLocally(sharednotebooks);
-  //    } catch (e) {
-  //      print("Error parsing response: $e");
-  //    }
-  //  } else {
-  //    print("Failed to fetch notebooks: ${response.body}");
-  //  }
-  //}
+  static Future<bool> fetchSharedNotebooksCanBeEdited(String token, int notebookId) async {
+   final url = Uri.parse(
+       'https://timely.pythonanywhere.com/api/v1/sharednotebooks/').replace(
+       queryParameters: {'notebook': '$notebookId'});
+   final response = await http.get(
+     url,
+     headers: {
+       'Content-Type': 'application/json',
+       'Authorization': 'Token $token',
+     },
+   );
+  
+   print("Raw API Response: ${response.body}"); // Debugging
+  
+   if (response.statusCode == 200) {
+     try {
+       final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+  
+       // Validate 'results' key exists and is a list
+       if (!jsonResponse.containsKey('results') ||
+           jsonResponse['results'] is! List) {
+         print("Error: 'results' key missing or not a List in response");
+         return false;
+       }
+  
+       final List<dynamic> data = jsonResponse['results'];
+  
+       print("Shared Notebooks fetched successfully!");
+       print("Shared Notebooks Data ==> ${jsonEncode(data)}");
+       
+  
+       // Ensure items in 'data' are maps before conversion
+       List<SharedNotebook> sharednotebooks = data
+           .where((item) => item is Map<String, dynamic>)
+           .map((item) => SharedNotebook.fromJson(item as Map<String, dynamic>))
+           .toList();
+
+      if (sharednotebooks.isNotEmpty && sharednotebooks[0].canEdit) {
+        return true;
+      } else {
+        print("No shared notebooks found for this notebook.");
+      }
+  
+     } catch (e) {
+       print("Error parsing response: $e");
+     }
+   } else {
+     print("Failed to fetch notebooks: ${response.body}");
+   }
+   return false; // Ensure a return value in all code paths
+  }
 
   static Future<void> fetchSharedNotebooks(String token) async {
     final url = Uri.parse(

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/auth/user_details_service.dart';
+import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/components/custom_page_animation.dart';
 import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/screens/add_notebook.dart';
@@ -39,16 +41,36 @@ class NotebookDetailPage extends StatefulWidget {
   State<NotebookDetailPage> createState() => _NotebookDetailPageState();
 }
 
-class _NotebookDetailPageState extends State<NotebookDetailPage> {
+class _NotebookDetailPageState extends State<NotebookDetailPage>
+    with TickerProviderStateMixin {
   Map<String, dynamic>? _notebookData;
   bool _isLoading = true;
   String _errorMessage = "";
   late String _token;
+  bool _dataReady = false;
+  late AnimationController _bodyController;
+  late AnimationController _actionsController;
 
   @override
   void initState() {
     super.initState();
     _loadTokenAndFetchNotebook();
+    _bodyController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    )..repeat();
+    _actionsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _bodyController.dispose();
+    _actionsController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTokenAndFetchNotebook() async {
@@ -79,18 +101,29 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       body: jsonEncode({'is_favourite': !IsFavourite}),
     );
     if (response.statusCode == 200) {
-      IsFavourite ? showAnimatedSnackBar(
-          context, "Unhearted", isSuccess: true,
-          isTop: true) : showAnimatedSnackBar(
-          context, "Marked Favourite", isSuccess: true,
-          isTop: true);
+      IsFavourite
+          ? showAnimatedSnackBar(
+            context,
+            "Unhearted",
+            isSuccess: true,
+            isTop: true,
+          )
+          : showAnimatedSnackBar(
+            context,
+            "Marked Favourite",
+            isSuccess: true,
+            isTop: true,
+          );
       setState(() {
         IsFavourite = !IsFavourite;
       });
     } else {
       showAnimatedSnackBar(
-          context, "Something Went Wrong", isError: true,
-          isTop: true);
+        context,
+        "Something Went Wrong",
+        isError: true,
+        isTop: true,
+      );
     }
   }
 
@@ -107,7 +140,12 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     );
     print(response);
     if (response.statusCode == 204) {
-      showAnimatedSnackBar(context, "${NotebookName} has been Deleted Successfully", isSuccess: true,isTop: true);
+      showAnimatedSnackBar(
+        context,
+        "${NotebookName} has been Deleted Successfully",
+        isSuccess: true,
+        isTop: true,
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -115,7 +153,12 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
         ),
       );
     } else {
-      showAnimatedSnackBar(context, "Something went wrong!", isError: true,isTop: true);
+      showAnimatedSnackBar(
+        context,
+        "Something went wrong!",
+        isError: true,
+        isTop: true,
+      );
     }
   }
 
@@ -138,7 +181,23 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
         _isLoading = false;
       });
       final userDetails = await UserStorageHelper.getUserDetails();
-      if (userDetails != null &&
+      bool canEditNotebook = await auth_service
+          .AuthService.fetchSharedNotebooksCanBeEdited(
+        _token,
+        widget.notebookId,
+      );
+      if (canEditNotebook) {
+        if (mounted) {
+          setState(() {
+            widget.canEdit = true;
+            widget.canDelete = true;
+            widget.canFavourite = true;
+            widget.canExportToPDF = true;
+            widget.canExportToJSON = true;
+            _dataReady = true;
+          });
+        }
+      } else if (userDetails != null &&
           (userDetails['user_id'] == _notebookData!['author']) &&
           widget.canEdit != true) {
         if (mounted) {
@@ -148,6 +207,18 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
             widget.canFavourite = true;
             widget.canExportToPDF = true;
             widget.canExportToJSON = true;
+            _dataReady = true;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            widget.canEdit = false;
+            widget.canDelete = false;
+            widget.canFavourite = false;
+            widget.canExportToPDF = false;
+            widget.canExportToJSON = false;
+            _dataReady = true;
           });
         }
       }
@@ -155,20 +226,26 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       setState(() {
         _errorMessage = "404 - No Notebook Found!";
         _isLoading = false;
+        _dataReady = true;
       });
       showAnimatedSnackBar(
-          context, "404 - No Notebook Found!", isError: true,
-          isTop: true);
-    }
-    else {
+        context,
+        "404 - No Notebook Found!",
+        isError: true,
+        isTop: true,
+      );
+    } else {
       setState(() {
         _errorMessage = "Failed to load notebook.";
         _isLoading = false;
+        _dataReady = true;
       });
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForPages({bool forceRefresh = false}) async {
+  Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForPages({
+    bool forceRefresh = false,
+  }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // final String? cachedData = prefs.getString('notebook_${widget.notebookId}');
 
@@ -177,7 +254,9 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     //   return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
     // }
     if (!forceRefresh) {
-      final String? cachedData = prefs.getString('notebook_${widget.notebookId}');
+      final String? cachedData = prefs.getString(
+        'notebook_${widget.notebookId}',
+      );
       if (cachedData != null) {
         return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
       }
@@ -202,7 +281,8 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       final Map<String, dynamic> notebookData = jsonDecode(response.body);
       final List<String> pageUuids = List<String>.from(
-          notebookData['pages'] ?? []);
+        notebookData['pages'] ?? [],
+      );
       // final List<String> subpageUuids = List<String>.from(
       //     notebookData['sugpages'] ?? []);
 
@@ -215,8 +295,9 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       // Fetch pages in parallel instead of sequentially
       final List<Map<String, dynamic>?> pages = await Future.wait(
-        pageUuids.map((uuid) =>
-            auth_service.AuthService.fetchPageDetails(uuid, _token)),
+        pageUuids.map(
+          (uuid) => auth_service.AuthService.fetchPageDetails(uuid, _token),
+        ),
       );
 
       // Fetch subpages in parallel instead of sequentially
@@ -227,7 +308,10 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       // Remove null results (failed fetches)
       final List<Map<String, dynamic>> validPages =
-      pages.where((page) => page != null).cast<Map<String, dynamic>>().toList();
+          pages
+              .where((page) => page != null)
+              .cast<Map<String, dynamic>>()
+              .toList();
 
       // Remove null results (failed fetches)
       // final List<Map<String, dynamic>> validSubPages =
@@ -236,10 +320,14 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       // Cache the fetched pages
       await auth_service.AuthService.savePagesLocally(
-          notebookData['id'], validPages);
+        notebookData['id'],
+        validPages,
+      );
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString(
-          'notebook_${widget.notebookId}', jsonEncode(validPages));
+        'notebook_${widget.notebookId}',
+        jsonEncode(validPages),
+      );
 
       // await auth_service.AuthService.saveSubPagesLocally(
       //     notebookData['id'], validSubPages);
@@ -259,8 +347,9 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForSubPages(
-      {bool forceRefresh = false}) async {
+  Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForSubPages({
+    bool forceRefresh = false,
+  }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // final String? cachedData = prefs.getString('notebook_${widget.notebookId}');
 
@@ -270,14 +359,14 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     // }
     if (!forceRefresh) {
       final String? cachedData = prefs.getString(
-          'notebook_subpages_${widget.notebookId}');
+        'notebook_subpages_${widget.notebookId}',
+      );
       if (cachedData != null) {
         return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
       }
     }
     final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget
-          .notebookId}/',
+      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
     );
     final response = await http.get(
       url,
@@ -303,7 +392,8 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       final Map<String, dynamic> notebookData = jsonDecode(response.body);
       final List<String> subpageUuids = List<String>.from(
-          notebookData['sugpages'] ?? []);
+        notebookData['sugpages'] ?? [],
+      );
       print(subpageUuids);
       print("Subpages = ^");
 
@@ -313,21 +403,28 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       // Fetch subpages in parallel instead of sequentially
       final List<Map<String, dynamic>?> subpages = await Future.wait(
-        subpageUuids.map((uuid) =>
-            auth_service.AuthService.fetchSubPageDetails(uuid, _token)),
+        subpageUuids.map(
+          (uuid) => auth_service.AuthService.fetchSubPageDetails(uuid, _token),
+        ),
       );
 
       // Remove null results (failed fetches)
       final List<Map<String, dynamic>> validSubPages =
-      subpages.where((subpages) => subpages != null).cast<
-          Map<String, dynamic>>().toList();
+          subpages
+              .where((subpages) => subpages != null)
+              .cast<Map<String, dynamic>>()
+              .toList();
 
       await auth_service.AuthService.saveSubPagesLocally(
-          notebookData['id'], validSubPages);
-      final SharedPreferences prefsSubpage = await SharedPreferences
-          .getInstance();
+        notebookData['id'],
+        validSubPages,
+      );
+      final SharedPreferences prefsSubpage =
+          await SharedPreferences.getInstance();
       await prefsSubpage.setString(
-          'notebook_subpages_${widget.notebookId}', jsonEncode(validSubPages));
+        'notebook_subpages_${widget.notebookId}',
+        jsonEncode(validSubPages),
+      );
 
       return validSubPages;
     } else {
@@ -339,19 +436,17 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     }
   }
 
-
-  Future<void> _showDeleteConfirmationDialog(int notebookID,
-      String notebookName,) async {
+  Future<void> _showDeleteConfirmationDialog(
+    int notebookID,
+    String notebookName,
+  ) async {
     return showDialog<void>(
       context: context,
       barrierDismissible:
-      false, // Prevent dialog from closing when tapping outside
+          false, // Prevent dialog from closing when tapping outside
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Theme
-              .of(context)
-              .colorScheme
-              .inverseSurface,
+          backgroundColor: Theme.of(context).colorScheme.inverseSurface,
           title: const Text("Delete Notebook"),
           content: Text(
             "Are you sure you want to delete '$notebookName'? This action cannot be undone.",
@@ -385,12 +480,16 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
           builder: (context, setState) {
             late Future<Map<String, dynamic>> _notebookFuture;
 
-            Future<Map<String, dynamic>> _initNotebook({bool forceRefresh=false}) async {
+            Future<Map<String, dynamic>> _initNotebook({
+              bool forceRefresh = false,
+            }) async {
               late List<Map<String, dynamic>> pages;
               late List<Map<String, dynamic>> subpages;
               if (forceRefresh) {
                 pages = await _fetchNotebookDetailsForPages(forceRefresh: true);
-                subpages = await _fetchNotebookDetailsForSubPages(forceRefresh: true);
+                subpages = await _fetchNotebookDetailsForSubPages(
+                  forceRefresh: true,
+                );
               } else {
                 pages = await _fetchNotebookDetailsForPages();
                 subpages = await _fetchNotebookDetailsForSubPages();
@@ -399,10 +498,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
               //     dynamic>> pages = await _fetchNotebookDetailsForPages(forceRefresh: true);
               // final List<Map<String,
               //     dynamic>> subpages = await _fetchNotebookDetailsForSubPages(forceRefresh: true);
-              return {
-                'pages': pages,
-                'sugpages': subpages,
-              };
+              return {'pages': pages, 'sugpages': subpages};
             }
 
             _notebookFuture = _initNotebook();
@@ -417,12 +513,10 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
               heightFactor: 0.45,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Theme
-                      .of(context)
-                      .colorScheme
-                      .inverseSurface,
+                  color: Theme.of(context).colorScheme.inverseSurface,
                   borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16)),
+                    top: Radius.circular(16),
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -437,14 +531,18 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
                             "Pages",
                             style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.refresh),
@@ -460,30 +558,32 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return const Center(
-                                child: CircularProgressIndicator());
+                              child: CircularProgressIndicator(),
+                            );
                           } else if (snapshot.hasError) {
                             return Center(
-                                child: Text("Error: ${snapshot.error}"));
+                              child: Text("Error: ${snapshot.error}"),
+                            );
                           } else if (!snapshot.hasData) {
                             return Center(
                               child: Text(
                                 "No Pages Found!",
                                 style: TextStyle(
-                                  color: Theme
-                                      .of(context)
-                                      .colorScheme
-                                      .error,
+                                  color: Theme.of(context).colorScheme.error,
                                   fontSize: 20,
                                 ),
                               ),
                             );
                           } else {
                             final data = snapshot.data!;
-                            final List<Map<String, dynamic>> pages = List<
-                                Map<String, dynamic>>.from(data['pages'] ?? []);
-                            final List<Map<String, dynamic>> subpages = List<
-                                Map<String, dynamic>>.from(
-                                data['sugpages'] ?? []);
+                            final List<Map<String, dynamic>> pages =
+                                List<Map<String, dynamic>>.from(
+                                  data['pages'] ?? [],
+                                );
+                            final List<Map<String, dynamic>> subpages =
+                                List<Map<String, dynamic>>.from(
+                                  data['sugpages'] ?? [],
+                                );
                             print("Subpagess=>");
                             print(subpages);
                             return ListView.builder(
@@ -493,11 +593,13 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                                 final page = pages[pageIndex];
                                 final pageUuid = page['page_uuid'];
                                 final pageId = page['id'];
-                                final pageTitle = page['title'] ??
-                                    'Page \${pageIndex + 1}';
+                                final pageTitle =
+                                    page['title'] ?? 'Page \${pageIndex + 1}';
 
-                                final subpagesForPage = subpages.where((
-                                    sub) => sub['page'] == pageId).toList();
+                                final subpagesForPage =
+                                    subpages
+                                        .where((sub) => sub['page'] == pageId)
+                                        .toList();
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -507,38 +609,42 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) =>
-                                                PageDetailsPage(
-                                                    pageUuid: pageUuid),
+                                            builder:
+                                                (context) => PageDetailsPage(
+                                                  pageUuid: pageUuid,
+                                                ),
                                           ),
                                         );
                                       },
                                       child: ListTile(
                                         leading: Container(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 2),
+                                            horizontal: 14,
+                                            vertical: 2,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: Theme
-                                                .of(context)
-                                                .colorScheme
-                                                .tertiary,
+                                            color:
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.tertiary,
                                             borderRadius: BorderRadius.circular(
-                                                8.0),
+                                              8.0,
+                                            ),
                                             border: Border.all(
-                                              color: Theme
-                                                  .of(context)
-                                                  .colorScheme
-                                                  .tertiary,
+                                              color:
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.tertiary,
                                               width: 5.0,
                                             ),
                                           ),
                                           child: Text(
                                             "${pageIndex + 1}",
                                             style: TextStyle(
-                                              color: Theme
-                                                  .of(context)
-                                                  .colorScheme
-                                                  .surface,
+                                              color:
+                                                  Theme.of(
+                                                    context,
+                                                  ).colorScheme.surface,
                                               fontSize: 20,
                                               fontWeight: FontWeight.w800,
                                             ),
@@ -546,43 +652,56 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                                         ),
                                         title: Text(
                                           pageTitle,
-                                          style: TextStyle(color: Theme
-                                              .of(context)
-                                              .colorScheme
-                                              .surface),
+                                          style: TextStyle(
+                                            color:
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.surface,
+                                          ),
                                         ),
                                         trailing: const Icon(
-                                            Icons.arrow_forward_ios_rounded),
+                                          Icons.arrow_forward_ios_rounded,
+                                        ),
                                       ),
                                     ),
-                                    ...subpagesForPage.map((sub) =>
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              left: 48.0),
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      SubPageDetailsPage(
-                                                          subpageUuid: sub['subpage_uuid']),
-                                                ),
-                                              );
-                                            },
-                                            child: ListTile(
-                                              leading: const Icon(Icons
-                                                  .subdirectory_arrow_right_rounded),
-                                              title: Text(
-                                                sub['title'] ?? 'Subpage',
-                                                style: TextStyle(color: Theme
-                                                    .of(context)
-                                                    .colorScheme
-                                                    .surface),
+                                    ...subpagesForPage.map(
+                                      (sub) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 48.0,
+                                        ),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder:
+                                                    (
+                                                      context,
+                                                    ) => SubPageDetailsPage(
+                                                      subpageUuid:
+                                                          sub['subpage_uuid'],
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          child: ListTile(
+                                            leading: const Icon(
+                                              Icons
+                                                  .subdirectory_arrow_right_rounded,
+                                            ),
+                                            title: Text(
+                                              sub['title'] ?? 'Subpage',
+                                              style: TextStyle(
+                                                color:
+                                                    Theme.of(
+                                                      context,
+                                                    ).colorScheme.surface,
                                               ),
                                             ),
                                           ),
-                                        ))
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 );
                               },
@@ -617,94 +736,111 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       appBar: AppBar(
         title: widget.isPasswordProtected ? Text("LOCKED NOTEBOOK") : Text(""),
-        backgroundColor: Theme
-            .of(context)
-            .colorScheme.inverseSurface,
-        foregroundColor: Theme
-            .of(context)
-            .colorScheme
-            .primary,
+        backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+        foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       persistentFooterButtons: [
-        widget.canEdit ? Row(
-          children: [
-            Expanded(
-              flex: 4,
-              child: Container(
-                padding: const EdgeInsets.all(8.0),
-                margin: const EdgeInsets.all(5),
-                // color: Colors.black,
-                decoration: BoxDecoration(
-                  color: isFavourite ? Colors.red[100] : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.deepPurple.shade100,
-                    width: 2,
+        !_dataReady
+            ? Container(
+              padding: EdgeInsets.all(5),
+              child: CustomLoadingElement(
+                bookController: _actionsController,
+                width: 70,
+                height: 70,
+                padding: EdgeInsets.all(10),
+                margin: EdgeInsets.only(top: 0),
+                icon: Icons8.edit,
+                iconColor: Theme.of(context).colorScheme.surface,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+              ),
+            )
+            : widget.canEdit
+            ? Row(
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(8.0),
+                    margin: const EdgeInsets.all(5),
+                    // color: Colors.black,
+                    decoration: BoxDecoration(
+                      color: isFavourite ? Colors.red[100] : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.deepPurple.shade100,
+                        width: 2,
+                      ),
+                    ),
+                    child: IconButton(
+                      onPressed: () async {
+                        await _toggleIsFavourite(
+                          _notebookData?['id'],
+                          isFavourite,
+                        );
+                        await _loadTokenAndFetchNotebook();
+                      },
+                      icon:
+                          isFavourite
+                              ? const Icon(Icons.favorite, color: Colors.red)
+                              : Icon(
+                                Icons.favorite_border,
+                                color: Colors.deepPurple.shade100,
+                              ),
+                    ),
                   ),
                 ),
-                child: IconButton(
-                  onPressed: () async {
-                    await _toggleIsFavourite(_notebookData?['id'], isFavourite);
-                    await _loadTokenAndFetchNotebook();
-                  },
-                  icon:
-                      isFavourite
-                          ? const Icon(Icons.favorite, color: Colors.red)
-                          : Icon(
-                            Icons.favorite_border,
-                            color: Colors.deepPurple.shade100,
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(8.0),
+                    margin: const EdgeInsets.all(5),
+                    // color: Colors.black,
+                    decoration: BoxDecoration(
+                      // color: note.isFavorite ? Colors.red : Colors.deepPurple[100],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.deepPurple.shade100,
+                        width: 2,
+                      ),
+                    ),
+                    child: IconButton(
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          createRoute(
+                            AddNotebookPage(notebookId: _notebookData?['id']),
                           ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(8.0),
-                margin: const EdgeInsets.all(5),
-                // color: Colors.black,
-                decoration: BoxDecoration(
-                  // color: note.isFavorite ? Colors.red : Colors.deepPurple[100],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.deepPurple.shade100,
-                    width: 2,
+                        );
+                      },
+                      icon: const Icon(Icons.edit),
+                    ),
                   ),
                 ),
-                child: IconButton(
-                  onPressed: () {
-                    Navigator.of(context).push(createRoute(
-                        AddNotebookPage(notebookId: _notebookData?['id'])));
-                  },
-                  icon: const Icon(Icons.edit),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(8.0),
-                margin: const EdgeInsets.all(5),
-                // color: Colors.black,
-                decoration: BoxDecoration(
-                  // color: note.isFavorite ? Colors.red : Colors.deepPurple[100],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.deepPurple.shade100,
-                    width: 2,
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(8.0),
+                    margin: const EdgeInsets.all(5),
+                    // color: Colors.black,
+                    decoration: BoxDecoration(
+                      // color: note.isFavorite ? Colors.red : Colors.deepPurple[100],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.deepPurple.shade100,
+                        width: 2,
+                      ),
+                    ),
+                    child: IconButton(
+                      onPressed: () {
+                        _showDeleteConfirmationDialog(
+                          _notebookData?['id'],
+                          _notebookData?['title'],
+                        );
+                      },
+                      icon: const Icon(Icons.delete_forever_rounded),
+                    ),
                   ),
                 ),
-                child: IconButton(
-                  onPressed: () {
-                    _showDeleteConfirmationDialog(
-                      _notebookData?['id'],
-                      _notebookData?['title'],
-                    );
-                  },
-                  icon: const Icon(Icons.delete_forever_rounded),
-                ),
-              ),
-            ),
-          ],
-        ) : SizedBox(),
+              ],
+            )
+            : SizedBox(),
       ],
       floatingActionButton: FloatingActionButton(
         //check if the note is favorite or not and change the icon as needed
@@ -713,8 +849,15 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
         child: const Icon(Icons.description_outlined, color: Colors.deepPurple),
       ),
       body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
+          _isLoading && !_dataReady
+              ? Center(
+                child: CustomLoadingElement(
+                  bookController: _bodyController,
+                  icon: Icons8.book,
+                  iconColor: Theme.of(context).colorScheme.surface,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                ),
+              )
               : _errorMessage.isNotEmpty
               ? Center(
                 child: Text(_errorMessage, style: TextStyle(color: Colors.red)),
@@ -734,16 +877,12 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                       ),
                     ),
                     Text(
-                      "Last Updated: ${formatDateTime(
-                          _notebookData?['updated_at'])}",
+                      "Last Updated: ${formatDateTime(_notebookData?['updated_at'])}",
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Sora',
-                        color: Theme
-                            .of(context)
-                            .colorScheme
-                            .surface,
+                        color: Theme.of(context).colorScheme.surface,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -755,18 +894,13 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                           //doNotRenderTheseTags: {'iframe','form'},
                           style: {
                             '*': Style(
-                              color: Theme
-                                  .of(context)
-                                  .colorScheme
-                                  .surface,
-                              backgroundColor: Theme
-                                  .of(context)
-                                  .colorScheme
-                                  .inverseSurface,
+                              color: Theme.of(context).colorScheme.surface,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.inverseSurface,
                             ),
                           },
                           data:
-                          _notebookData?['body'] ??
+                              _notebookData?['body'] ??
                               "<p>No content available</p>",
                           onAnchorTap: (url, context, attributes) {
                             if (url != null) {

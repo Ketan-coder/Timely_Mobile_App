@@ -68,7 +68,6 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
       await auth_service.AuthService.loadSharedNotebooksFromLocal();
       List<Notebook> publicNotebooks =
       await auth_service.AuthService.loadPublicNotebooksFromLocal();
-
       setState(() {
         _sharedNotebooks =
             sharedNotebooks.map((notebook) => notebook.toJson()).toList();
@@ -578,16 +577,10 @@ class _PublicTabState extends State<PublicTab> with SingleTickerProviderStateMix
                           ? const Icon(Icons.lock, color: Colors.red)
                           : const SizedBox(),
                       onTap: () async {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                NotebookDetailPage(
-                                  notebookId: notebook.id,
-                                  isPasswordProtected: isProtected,
-                                ),
-                          ),
-                        );
+                        Navigator.of(context).push(createRoute(
+                            NotebookDetailPage(
+                                notebookId: notebook.id,
+                                isPasswordProtected: isProtected)));
                       },
                     ),
                   );
