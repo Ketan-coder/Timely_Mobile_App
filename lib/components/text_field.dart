@@ -99,6 +99,16 @@ class _MyTextFieldState extends State<MyTextField> {
     return Padding(
       padding: const EdgeInsets.all(10.0),
       child: TextField(
+        style: TextStyle(
+          color: Theme
+              .of(context)
+              .colorScheme
+              .surface,
+          backgroundColor: Theme
+              .of(context)
+              .colorScheme
+              .inverseSurface,
+        ),
         controller: widget.controller,
         obscureText: widget.obscuretext,
         maxLines: widget.maxlines,

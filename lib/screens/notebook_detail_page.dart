@@ -15,6 +15,8 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../components/bottom_nav_bar.dart';
 
+import '../models/profile.dart';
+import '../models/shared_notebook.dart';
 import '../utils/date_formatter.dart';
 
 class NotebookDetailPage extends StatefulWidget {
@@ -50,6 +52,8 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   bool _dataReady = false;
   late AnimationController _bodyController;
   late AnimationController _actionsController;
+  bool canEditNotebook = false;
+  List<ProfileModel?> sharedUsers = [];
 
   @override
   void initState() {
@@ -58,11 +62,13 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
     _bodyController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
-    )..repeat();
+    )
+      ..repeat();
     _actionsController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
-    )..repeat();
+    )
+      ..repeat();
   }
 
   @override
@@ -178,14 +184,43 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
       setState(() {
         _notebookData = jsonDecode(response.body);
         print(_notebookData);
-        _isLoading = false;
       });
       final userDetails = await UserStorageHelper.getUserDetails();
-      bool canEditNotebook = await auth_service
-          .AuthService.fetchSharedNotebooksCanBeEdited(
+      List<SharedNotebook> sharedNotebookDetails = await auth_service
+          .AuthService.fetchSharedNotebooksByNotebookId(
         _token,
         widget.notebookId,
       );
+      List<ProfileModel> allSharedUsers = []; // Collect all users first
+
+      if (sharedNotebookDetails.isNotEmpty) {
+        canEditNotebook =
+            sharedNotebookDetails.any((notebook) => notebook.canEdit);
+
+        for (var sharedNotebook in sharedNotebookDetails) {
+          if (sharedNotebook.sharedTo != null &&
+              sharedNotebook.sharedTo.isNotEmpty) {
+            for (var sharedUserProfileId in sharedNotebook.sharedTo) {
+              ProfileModel? user = await auth_service.AuthService
+                  .fetchUserByProfileId(_token, sharedUserProfileId);
+              if (user != null) {
+                allSharedUsers.add(user);
+              }
+            }
+          }
+        }
+
+        // Now save all users at once
+        if (allSharedUsers.isNotEmpty) {
+          await auth_service.AuthService.saveUserLocally(
+              widget.notebookId, allSharedUsers);
+          sharedUsers =
+          await auth_service.AuthService.getUserLocally(widget.notebookId);
+        }
+      } else {
+        canEditNotebook = false;
+      }
+
       if (canEditNotebook) {
         if (mounted) {
           setState(() {
@@ -195,6 +230,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
             widget.canExportToPDF = true;
             widget.canExportToJSON = true;
             _dataReady = true;
+            _isLoading = false;
           });
         }
       } else if (userDetails != null &&
@@ -208,6 +244,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
             widget.canExportToPDF = true;
             widget.canExportToJSON = true;
             _dataReady = true;
+            _isLoading = false;
           });
         }
       } else {
@@ -219,6 +256,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
             widget.canExportToPDF = false;
             widget.canExportToJSON = false;
             _dataReady = true;
+            _isLoading = false;
           });
         }
       }
@@ -720,6 +758,75 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
     );
   }
 
+  void _showSharedUsersBottomSheet(BuildContext context,
+      List<ProfileModel> sharedUsers) {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .surface,
+      //barrierColor: Theme.of(context).colorScheme.primary,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: Theme
+                .of(context)
+                .colorScheme
+                .inverseSurface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(16),
+            ),
+          ),
+          child: sharedUsers.isNotEmpty
+              ? ListView.builder(
+            itemCount: sharedUsers.length,
+            itemBuilder: (context, index) {
+              final user = sharedUsers[index];
+              return ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme
+                      .of(context)
+                      .colorScheme
+                      .primary,
+                  child: Text(user.firstName[0].toUpperCase(),
+                      style: TextStyle(color: Theme
+                          .of(context)
+                          .colorScheme
+                          .surface)),
+                ),
+                isThreeLine: user.user?.lastLogin != null ? true : false,
+                title: Text("${user.firstName} ${user.lastName}",
+                    style: TextStyle(color: Theme
+                        .of(context)
+                        .colorScheme
+                        .primary)),
+                subtitle: Text(
+                    user.user?.lastLogin != null ? "${user.email} \n ${user.user
+                        ?.lastLogin}" : user.email,
+                    style: TextStyle(color: Theme
+                        .of(context)
+                        .colorScheme
+                        .primary)),
+              );
+            },
+          )
+              : Center(
+            child: Text(
+              "No shared users found.",
+              style: TextStyle(fontSize: 16),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
   void _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
@@ -732,12 +839,22 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   @override
   Widget build(BuildContext context) {
     bool isFavourite = _notebookData?['is_favourite'] ?? false;
+    bool isShared = _notebookData?['is_shared'] ?? false;
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .inverseSurface,
       appBar: AppBar(
         title: widget.isPasswordProtected ? Text("LOCKED NOTEBOOK") : Text(""),
-        backgroundColor: Theme.of(context).colorScheme.inverseSurface,
-        foregroundColor: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme
+            .of(context)
+            .colorScheme
+            .inverseSurface,
+        foregroundColor: Theme
+            .of(context)
+            .colorScheme
+            .primary,
       ),
       persistentFooterButtons: [
         !_dataReady
@@ -839,34 +956,75 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
                   ),
                 ),
               ],
-            )
+        )
             : SizedBox(),
       ],
-      floatingActionButton: FloatingActionButton(
-        //check if the note is favorite or not and change the icon as needed
-        onPressed: () => showPageBottomSheet(context),
-        //check if the note is favorite or not and change the icon as needed
-        child: const Icon(Icons.description_outlined, color: Colors.deepPurple),
+      //floatingActionButton: FloatingActionButton(
+      //  //check if the note is favorite or not and change the icon as needed
+      //  onPressed: () => showPageBottomSheet(context),
+      //  //check if the note is favorite or not and change the icon as needed
+      //  child: const Icon(Icons.description_outlined, color: Colors.deepPurple),
+      //),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end, // Align buttons to the right
+        children: [
+          isShared ? Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: FloatingActionButton(
+                heroTag: 'Show Shared User Sheet Button',
+                backgroundColor: Theme
+                    .of(context)
+                    .colorScheme
+                    .inverseSurface,
+                foregroundColor: Theme
+                    .of(context)
+                    .colorScheme
+                    .surface,
+                tooltip: "Show Shared User Sheet",
+                onPressed: () =>
+                    _showSharedUsersBottomSheet(context,
+                        sharedUsers.whereType<ProfileModel>().toList()),
+                child: Icon(Icons.share, color: Theme
+                    .of(context)
+                    .colorScheme
+                    .primary,)
+            ),
+          ) : SizedBox(),
+          SizedBox(width: 12), // Adds spacing between buttons
+          FloatingActionButton(
+            heroTag: 'Show Page Bottom Sheet Button',
+            tooltip: "Show Page Bottom Sheet",
+            onPressed: () => showPageBottomSheet(context),
+            child: const Icon(
+                Icons.description_outlined, color: Colors.deepPurple),
+          ),
+        ],
       ),
       body:
-          _isLoading && !_dataReady
-              ? Center(
-                child: CustomLoadingElement(
-                  bookController: _bodyController,
-                  icon: Icons8.book,
-                  iconColor: Theme.of(context).colorScheme.surface,
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                ),
-              )
-              : _errorMessage.isNotEmpty
-              ? Center(
-                child: Text(_errorMessage, style: TextStyle(color: Colors.red)),
-              )
-              : Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
+      _isLoading && !_dataReady
+          ? Center(
+        child: CustomLoadingElement(
+          bookController: _bodyController,
+          icon: Icons8.book,
+          iconColor: Theme
+              .of(context)
+              .colorScheme
+              .surface,
+          backgroundColor: Theme
+              .of(context)
+              .colorScheme
+              .primary,
+        ),
+      )
+          : _errorMessage.isNotEmpty
+          ? Center(
+        child: Text(_errorMessage, style: TextStyle(color: Colors.red)),
+      )
+          : Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
                     Text(
                       _notebookData?['title'] ?? 'Untitled',
                       style: TextStyle(
@@ -900,7 +1058,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
                             ),
                           },
                           data:
-                              _notebookData?['body'] ??
+                          _notebookData?['body'] ??
                               "<p>No content available</p>",
                           onAnchorTap: (url, context, attributes) {
                             if (url != null) {
@@ -910,7 +1068,8 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
                         ),
                       ),
                     ),
-                  ],
+            Padding(padding: EdgeInsets.only(top: 20)),
+          ],
                 ),
               ),
     );

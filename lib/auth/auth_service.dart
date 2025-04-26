@@ -7,7 +7,9 @@ import 'package:timely/models/todo.dart';
 import '../models/notebook.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/profile.dart';
 import '../models/reminder.dart';
+import '../models/user.dart';
 
 class AuthService {
   static Future<void> saveToken(String token) async {
@@ -99,57 +101,58 @@ class AuthService {
     }
   }
 
-  static Future<bool> fetchSharedNotebooksCanBeEdited(String token, int notebookId) async {
-   final url = Uri.parse(
-       'https://timely.pythonanywhere.com/api/v1/sharednotebooks/').replace(
-       queryParameters: {'notebook': '$notebookId'});
-   final response = await http.get(
-     url,
-     headers: {
-       'Content-Type': 'application/json',
-       'Authorization': 'Token $token',
-     },
-   );
-  
-   print("Raw API Response: ${response.body}"); // Debugging
-  
-   if (response.statusCode == 200) {
-     try {
-       final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-  
-       // Validate 'results' key exists and is a list
-       if (!jsonResponse.containsKey('results') ||
-           jsonResponse['results'] is! List) {
-         print("Error: 'results' key missing or not a List in response");
-         return false;
-       }
-  
-       final List<dynamic> data = jsonResponse['results'];
-  
-       print("Shared Notebooks fetched successfully!");
-       print("Shared Notebooks Data ==> ${jsonEncode(data)}");
-       
-  
-       // Ensure items in 'data' are maps before conversion
-       List<SharedNotebook> sharednotebooks = data
-           .where((item) => item is Map<String, dynamic>)
-           .map((item) => SharedNotebook.fromJson(item as Map<String, dynamic>))
-           .toList();
+  static Future<List<SharedNotebook>> fetchSharedNotebooksByNotebookId(
+      String token, int notebookId) async {
+    final url = Uri.parse(
+      'https://timely.pythonanywhere.com/api/v1/sharednotebooks/',
+    ).replace(
+      queryParameters: {'notebook': '$notebookId'},
+    );
 
-      if (sharednotebooks.isNotEmpty && sharednotebooks[0].canEdit) {
-        return true;
-      } else {
-        print("No shared notebooks found for this notebook.");
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token $token',
+      },
+    );
+
+    print("Raw API Response: ${response.body}"); // Debugging
+
+    if (response.statusCode == 200) {
+      try {
+        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+        // Validate 'results' key exists and is a list
+        if (!jsonResponse.containsKey('results') ||
+            jsonResponse['results'] is! List) {
+          print("Error: 'results' key missing or not a List in response");
+          return [];
+        }
+
+        final List<dynamic> data = jsonResponse['results'];
+
+        print("Shared Notebooks fetched successfully!");
+        print("Shared Notebooks Data ==> ${jsonEncode(data)}");
+
+        // Ensure items in 'data' are maps before conversion
+        List<SharedNotebook> sharedNotebooks = data
+            .where((item) => item is Map<String, dynamic>)
+            .map((item) =>
+            SharedNotebook.fromJson(item as Map<String, dynamic>))
+            .toList();
+
+        return sharedNotebooks;
+      } catch (e) {
+        print("Error parsing response: $e");
       }
-  
-     } catch (e) {
-       print("Error parsing response: $e");
-     }
-   } else {
-     print("Failed to fetch notebooks: ${response.body}");
-   }
-   return false; // Ensure a return value in all code paths
+    } else {
+      print("Failed to fetch shared notebooks: ${response.body}");
+    }
+
+    return []; // If error, return empty list
   }
+
 
   static Future<void> fetchSharedNotebooks(String token) async {
     final url = Uri.parse(
@@ -677,9 +680,10 @@ class AuthService {
   }
 
   // ======================================== Users ========================================
-    static Future<void> fetchUserByProfileId(String token,int profileId) async {
+  static Future<ProfileModel?> fetchUserByProfileId(String token,
+      int profileId) async {
     final url = Uri.parse(
-        'https://timely.pythonanywhere.com/api/v1/profiles/$profileId/');
+        'https://timely.pythonanywhere.com/api-auth/v1/profile/$profileId/');
     final response = await http.get(
       url,
       headers: {
@@ -688,40 +692,94 @@ class AuthService {
       },
     );
 
-    print("Raw API Response: ${response.body}"); // Debugging
+    print("Raw API Response: ${response.body}");
 
     if (response.statusCode == 200) {
       try {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
 
-        // Validate 'results' key exists and is a list
-        if (!jsonResponse.containsKey('results') ||
-            jsonResponse['results'] is! List) {
-          print("Error: 'results' key missing or not a List in response");
-          return;
-        }
-
-        final List<dynamic> data = jsonResponse['results'];
+        // Create ProfileModel
+        final profile = ProfileModel.fromJson(jsonResponse);
 
         print("Profile fetched successfully!");
-        print("Profile Data: ${jsonEncode(data)}");
+        print("Profile Full Name: ${profile.getProfileFullName()}");
+        if (profile.user != null) {
+          print("User Full Name: ${profile.user!.getUserFullName()}");
+        }
 
-        // Ensure items in 'data' are maps before conversion
-        // List<Todo> todos = data
-        //     .where((item) => item is Map<String, dynamic>)
-        //     .map((item) => Todo.fromJson(item as Map<String, dynamic>))
-        //     .toList();
-
-        // Store notebooks locally
-        // await saveTodoLocally(todos);
-        return jsonResponse['results'];
+        return profile;
       } catch (e) {
         print("Error parsing response: $e");
       }
     } else {
       print("Failed to fetch profile: ${response.body}");
     }
+    return null;
   }
 
-  
+  static Future<void> saveUserLocally(int notebookId,
+      List<ProfileModel> users) async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<Map<String, dynamic>> userList = users.map((user) =>
+    {
+      'id': user.id,
+      'firstName': user.firstName,
+      'lastName': user.lastName,
+      'email': user.email,
+      'bio': user.bio,
+      'emailConfirmationToken': user.emailConfirmationToken,
+      'userId': user.userId,
+      'user': user.user != null
+          ? {
+        'first_name': user.user!.firstName,
+        'last_name': user.user!.lastName,
+        'email': user.user!.email,
+        'username': user.user!.username,
+        'lastLogin': user.user!.lastLogin,
+      }
+          : null,
+    }).toList();
+
+    String jsonString = jsonEncode(userList);
+
+    await prefs.setString('notebook_shared_users_$notebookId', jsonString);
+    print('Users for notebook $notebookId saved locally!');
+  }
+
+  static Future<List<ProfileModel>> getUserLocally(int notebookId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? jsonString = prefs.getString(
+        'notebook_shared_users_$notebookId');
+
+    if (jsonString == null) {
+      print('No users found for notebook $notebookId');
+      return [];
+    }
+
+    final List<dynamic> jsonData = jsonDecode(jsonString);
+
+    List<ProfileModel> users = jsonData.map((item) {
+      return ProfileModel(
+        id: item['id'],
+        firstName: item['firstName'] ?? '',
+        lastName: item['lastName'] ?? '',
+        email: item['email'] ?? '',
+        bio: item['bio'] ?? '',
+        emailConfirmationToken: item['emailConfirmationToken'] ?? '',
+        userId: item['userId'] ?? 0,
+        user: item['user'] != null
+            ? UserModel(
+          firstName: item['user']['first_name'] ?? '',
+          lastName: item['user']['last_name'] ?? '',
+          email: item['user']['email'] ?? '',
+          username: item['user']['username'] ?? '',
+          lastLogin: item['user']['lastLogin'],
+        )
+            : null,
+      );
+    }).toList();
+
+    print('Fetched ${users.length} users for notebook $notebookId!');
+    return users;
+  }
 }
