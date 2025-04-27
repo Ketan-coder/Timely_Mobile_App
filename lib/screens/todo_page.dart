@@ -22,6 +22,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
   bool _isRefreshing = false;
   String? _token;
   late AnimationController _todoController;
+  bool _isCompletedExpanded = false;
 
   @override
   void initState() {
@@ -30,7 +31,8 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
     _todoController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
-    )..repeat();
+    )
+      ..repeat();
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -143,6 +145,101 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
     }
   }
 
+  Future<void> _editTodoAPI(int todoId, String updatedTitle) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/todos/$todoId/');
+
+    final response = await http.patch(
+      url,
+      headers: {
+        'Authorization': 'Token $_token',
+      },
+      body: {
+        'title': updatedTitle.trim(),
+      },
+    );
+
+    if (response.statusCode == 200) {
+      _initializeData();
+      showAnimatedSnackBar(
+        context,
+        "Todo updated successfully",
+        isSuccess: true,
+        isTop: true,
+      );
+    } else {
+      showAnimatedSnackBar(
+        context,
+        "Failed to update Todo!",
+        isError: true,
+        isTop: true,
+      );
+    }
+  }
+
+  Future<void> _editTodo(BuildContext context,
+      Map<String, dynamic> todoData) async {
+    TextEditingController todoController = TextEditingController(
+        text: todoData['title'] ?? '');
+
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Theme
+                  .of(context)
+                  .colorScheme
+                  .inverseSurface,
+              titleTextStyle: TextStyle(color: Theme
+                  .of(context)
+                  .colorScheme
+                  .primary,),
+              title: const Text("Edit Todo"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: todoController,
+                    style: TextStyle(color: Theme
+                        .of(context)
+                        .colorScheme
+                        .surface,),
+                    decoration: InputDecoration(
+                      labelText: "Edit your todo",
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(), // ❌ Cancel
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    String updatedTodo = todoController.text.trim();
+                    if (updatedTodo.isNotEmpty) {
+                      await _editTodoAPI(todoData['id'], updatedTodo);
+                    }
+                    Navigator.of(context).pop(); // Close dialog
+                  },
+                  child: const Text(
+                    "Update",
+                    style: TextStyle(color: Colors.green),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
   Future<void> _deleteTodoAPI(int todoId, String todoName) async {
     final url = Uri.parse(
       'https://timely.pythonanywhere.com/api/v1/todos/$todoId/',
@@ -216,7 +313,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
 
   Future<void> _deleteTodo(BuildContext context, int todoID,
       String todoName) async {
-    TextEditingController todoController = TextEditingController();
+    //TextEditingController todoController = TextEditingController();
 
     return showDialog<void>(
       context: context,
@@ -363,11 +460,13 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                   child: CustomLoadingElement(bookController: _todoController,backgroundColor: Theme.of(context).colorScheme.primary,icon: Icons8.tasks,)
                 ),
                 SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final todo = _todos[index];
-                          bool isCompleted = todo['is_completed'] ?? false;
-                          return Padding(
+                  delegate: SliverChildListDelegate(
+                    [
+                      // 🏁 Uncompleted Tasks Section
+                      ..._todos
+                          .where((todo) => !(todo['is_completed'] ?? false))
+                          .map((todo) =>
+                          Padding(
                             padding: EdgeInsets.only(
                                 top: 12, left: 5, right: 5),
                             child: ListTile(
@@ -375,50 +474,129 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                                   .of(context)
                                   .colorScheme
                                   .surface,
-                              title: Text(todo['title'] ?? 'Untitled',
-                                style: TextStyle(color: Theme
-                                    .of(context)
-                                    .colorScheme
-                                    .primary,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    fontFamily: 'Sora'),),
+                              title: Text(
+                                todo['title'] ?? 'Untitled',
+                                style: TextStyle(
+                                  color: Theme
+                                      .of(context)
+                                      .colorScheme
+                                      .primary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
+                                  fontFamily: 'Sora',
+                                ),
+                              ),
                               subtitle: Text('Last updated: ${formatDateTime(
                                   todo['updated_at'])}'),
-                              trailing: IconButton(onPressed: () async {
-                                await _deleteTodo(
-                                    context, todo['id'], todo['title']);
-                              }, icon: Icon(Icons.delete, color: Colors.grey,)),
-                              leading: isCompleted
-                                  ? IconButton(
-                                icon: Icon(Icons.done, color: Colors.green),
+                              trailing: IconButton(
                                 onPressed: () async {
-                                  await _toggleCompleted(todo['id'],
-                                      todo['title'], isCompleted);
-                                },)
-                                  : IconButton(icon: Icon(Icons.check_circle),
+                                  await _deleteTodo(
+                                      context, todo['id'], todo['title']);
+                                },
+                                icon: Icon(Icons.delete, color: Colors.grey),
+                              ),
+                              leading: IconButton(
+                                icon: Icon(Icons.check_circle),
                                 onPressed: () async {
-                                  await _toggleCompleted(todo['id'],
-                                      todo['title'], isCompleted);
-                                },),
-                              onTap: () async {
-                                // await _showPasswordInputDialog(context,notebook['id'],notebook['title'],notebook['password'].toString(),isProtected);
-                                // Navigator.push(
-                                //   context,
-                                //   MaterialPageRoute(
-                                //     builder: (context) => NotebookDetailPage(
-                                //       notebookId: notebook['id'],
-                                //       isPasswordProtected: isProtected,
-                                //     ),
-                                //   ),
-                                // );
-                              },
+                                  await _toggleCompleted(
+                                      todo['id'], todo['title'], false);
+                                },
+                              ),
+                              onLongPress: () => _editTodo(context, todo),
                             ),
-                          );
-                        },
-                    childCount: _todos.length,
+                          ))
+                          .toList(),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 5.0, horizontal: 15.0),
+                        child: const Divider(thickness: 1,),
+                      ),
+                      // ✅ Completed Section Collapsible Header
+                      if (_todos.any((todo) => todo['is_completed'] == true))
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _isCompletedExpanded = !_isCompletedExpanded;
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 10),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 18.0),
+                                  child: Text(
+                                    "Completed Todos",
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 18.0),
+                                  child: Icon(
+                                    _isCompletedExpanded
+                                        ? Icons.keyboard_arrow_up
+                                        : Icons.keyboard_arrow_down,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      // 🏁 Completed Tasks Section (shown only if expanded)
+                      if (_isCompletedExpanded)
+                        ..._todos
+                            .where((todo) => todo['is_completed'] ?? false)
+                            .map((todo) =>
+                            Padding(
+                              padding: EdgeInsets.only(
+                                  top: 12, left: 5, right: 5),
+                              child: ListTile(
+                                textColor: Theme
+                                    .of(context)
+                                    .colorScheme
+                                    .surface,
+                                title: Text(
+                                  todo['title'] ?? 'Untitled',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    fontFamily: 'Sora',
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                                subtitle: Text('Last updated: ${formatDateTime(
+                                    todo['updated_at'])}'),
+                                trailing: IconButton(
+                                  onPressed: () async {
+                                    await _deleteTodo(
+                                        context, todo['id'], todo['title']);
+                                  },
+                                  icon: Icon(Icons.delete, color: Colors.grey),
+                                ),
+                                leading: IconButton(
+                                  icon: Icon(Icons.done, color: Colors.green),
+                                  onPressed: () async {
+                                    await _toggleCompleted(
+                                        todo['id'], todo['title'], true);
+                                  },
+                                ),
+                                onTap: () {},
+                              ),
+                            ))
+                            .toList(),
+                    ],
                   ),
                 ),
+
               ],
             ),
           ),
