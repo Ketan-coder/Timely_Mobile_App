@@ -29,9 +29,7 @@ String formatDateTime(String dateTimeString) {
 
     // Format without day suffix first
     String formatted =
-        DateFormat("hh:mm a ").format(dateTime) +
-        "$day$suffix " +
-        DateFormat("MMMM, yyyy").format(dateTime);
+        "${DateFormat("hh:mm a ").format(dateTime)}-$day$suffix ${DateFormat("MMMM, yyyy").format(dateTime)}";
 
     return formatted;
   } catch (e) {

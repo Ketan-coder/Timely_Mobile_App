@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/screens/subpage_detail_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
@@ -61,7 +62,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
     if (response.statusCode == 200) {
       setState(() {
         _pageData = jsonDecode(response.body);
-        print(_pageData);
+        //print(_pageData);
         _isLoading = false;
       });
 
@@ -118,7 +119,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
         'Authorization': 'Token $_token', // Replace with actual token
       },
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 204) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -170,7 +171,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
     if (response.statusCode == 200) {
       setState(() {
         _pageData = jsonDecode(response.body);
-        print(_pageData);
+        //print(_pageData);
         _isLoading = false;
       });
 
@@ -334,7 +335,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      print("Could not launch $url");
+      showAnimatedSnackBar(context, 'Could not launch $url', isError: true);
     }
   }
 

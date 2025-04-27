@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timely/auth/auth_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -37,23 +38,25 @@ class NotificationService {
   static final List<_PendingNotification> _manualNotifications = [];
 
   static Future<void> initialize() async {
-    print('[INIT] Initializing Notification Service...');
+    debugPrint('[INIT] Initializing Notification Service...');
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
-    print('[INIT] Timezone set to: ${tz.local}');
+    debugPrint('[INIT] Timezone set to: ${tz.local}');
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    AndroidInitializationSettings('@mipmap/ic_launcher');
 
     final InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
+    InitializationSettings(android: initializationSettingsAndroid);
 
-    final initialized = await _notificationsPlugin.initialize(initializationSettings);
+    final initialized = await _notificationsPlugin.initialize(
+        initializationSettings);
     await _notificationsPlugin
-    .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-    ?.requestExactAlarmsPermission();
-    print('[INIT] Requesting exact alarms permission...');
-    print('[INIT] Notification plugin initialized: $initialized');
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestExactAlarmsPermission();
+    debugPrint('[INIT] Requesting exact alarms permission...');
+    debugPrint('[INIT] Notification plugin initialized: $initialized');
 
     await requestExactAlarmsPermission();
     await createNotificationChannel();
@@ -66,11 +69,11 @@ class NotificationService {
     required DateTime scheduledDate,
   }) async {
     final tzDate = tz.TZDateTime.from(scheduledDate, tz.local);
-    print('[SCHEDULE] Scheduling Notification → ID: $id');
-    print('[SCHEDULE] Title: $title');
-    print('[SCHEDULE] Body: $body');
-    print('[SCHEDULE] Scheduled Date (raw): $scheduledDate');
-    print('[SCHEDULE] Scheduled Date (tz): $tzDate');
+    debugPrint('[SCHEDULE] Scheduling Notification → ID: $id');
+    debugPrint('[SCHEDULE] Title: $title');
+    debugPrint('[SCHEDULE] Body: $body');
+    debugPrint('[SCHEDULE] Scheduled Date (raw): $scheduledDate');
+    debugPrint('[SCHEDULE] Scheduled Date (tz): $tzDate');
 
     try {
       await _notificationsPlugin.zonedSchedule(
@@ -91,20 +94,21 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
 
-      print('[SCHEDULE] Notification scheduled successfully.');
+      debugPrint('[SCHEDULE] Notification scheduled successfully.');
       final pending = await _notificationsPlugin.pendingNotificationRequests();
-      print('[DEBUG] Total Pending Notifications: ${pending.length}');
+      debugPrint('[DEBUG] Total Pending Notifications: ${pending.length}');
       for (var n in pending) {
-        print('[DEBUG] Pending → ID: ${n.id}, Title: ${n.title}, Body: ${n.body}');
+        debugPrint('[DEBUG] Pending → ID: ${n.id}, Title: ${n.title}, Body: ${n
+            .body}');
       }
     } catch (e) {
-      print('[ERROR] Failed to schedule notification: $e');
+      debugPrint('[ERROR] Failed to schedule notification: $e');
     }
   }
 
   static Future<void> cancelNotification(int id) async {
     await _notificationsPlugin.cancel(id);
-    print('[CANCEL] Notification ID $id cancelled.');
+    debugPrint('[CANCEL] Notification ID $id cancelled.');
   }
 
   static Future<void> requestExactAlarmsPermission() async {
@@ -114,9 +118,9 @@ class NotificationService {
 
     final bool? granted = await androidImplementation?.requestExactAlarmsPermission();
     if (granted == true) {
-      print('[PERMISSION] Exact alarms permission granted.');
+      debugPrint('[PERMISSION] Exact alarms permission granted.');
     } else {
-      print('[PERMISSION] Exact alarms permission not granted.');
+      debugPrint('[PERMISSION] Exact alarms permission not granted.');
     }
   }
 
@@ -133,11 +137,11 @@ class NotificationService {
         importance: Importance.max,
       ),
     );
-    print('[CHANNEL] Notification channel created.');
+    debugPrint('[CHANNEL] Notification channel created.');
   }
 
   static Future<void> testImmediateNotification() async {
-    print('[TEST] Showing immediate test notification...');
+    debugPrint('[TEST] Showing immediate test notification...');
     await _notificationsPlugin.show(
       99,
       'Immediate Test',
@@ -157,41 +161,43 @@ class NotificationService {
   static Future<void> scheduleUsingShow({
   required int id,
   required String title,
-  required String body,
-  required DateTime scheduledDate,
-  required String channelId,
-  required String channelName,
-  String channelDescription = 'Channel for scheduled notifications',
-  bool showWhen = true,
-  bool onGoing = false,
-  bool autoCancel = true,
-  bool enableVibration = true,
-  bool playSound = true,
-  Int64List? vibrationPattern = null,
-  List<AndroidNotificationAction>? actions = const []
-}) async {
-  final now = DateTime.now();
-  final delay = scheduledDate.difference(now);
+    required String body,
+    required DateTime scheduledDate,
+    required String channelId,
+    required String channelName,
+    String channelDescription = 'Channel for scheduled notifications',
+    bool showWhen = true,
+    bool onGoing = false,
+    bool autoCancel = true,
+    bool enableVibration = true,
+    bool playSound = true,
+    Int64List? vibrationPattern,
+    List<AndroidNotificationAction>? actions = const []
+  }) async {
+    final now = DateTime.now();
+    final delay = scheduledDate.difference(now);
 
-  if (delay.isNegative) {
-    print('[SCHEDULE] Scheduled time is in the past. Skipping notification.');
-    return;
-  }
+    if (delay.isNegative) {
+      debugPrint(
+          '[SCHEDULE] Scheduled time is in the past. Skipping notification.');
+      return;
+    }
 
-  print('[SCHEDULE] Notification will show in ${delay.inSeconds} seconds');
+    debugPrint(
+        '[SCHEDULE] Notification will show in ${delay.inSeconds} seconds');
 
-  Future.delayed(delay, () async {
-    print('[SCHEDULE] Showing scheduled notification now...');
-    await _notificationsPlugin.show(
-      id,
-      title,
-      body,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          channelId,
-          channelName,
-          channelDescription: 'Channel for scheduled notifications',
-          importance: Importance.max,
+    Future.delayed(delay, () async {
+      debugPrint('[SCHEDULE] Showing scheduled notification now...');
+      await _notificationsPlugin.show(
+        id,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            channelId,
+            channelName,
+            channelDescription: 'Channel for scheduled notifications',
+            importance: Importance.max,
           priority: Priority.high,
           showWhen: showWhen,
           ongoing: onGoing,
@@ -226,7 +232,7 @@ class NotificationService {
       channelName: channelName,
       channelDescription: channelDescription,
     ));
-    print('[MANUAL] Added ID $id for scheduled show at $scheduledDate');
+    debugPrint('[MANUAL] Added ID $id for scheduled show at $scheduledDate');
   }
 
   // ✅ Periodically check pending ones
@@ -237,11 +243,12 @@ class NotificationService {
         if (!n.isShown && n.scheduledDate.isBefore(now)) {
           final isCompleted = await AuthService.checkIfReminderIsCompleted(
               n.id);
-          print('[MANUAL] Checking reminder ${n.id} status...');
-          print('[MANUAL] Reminder ${n.id} status: ${isCompleted
+          debugPrint('[MANUAL] Checking reminder ${n.id} status...');
+          debugPrint('[MANUAL] Reminder ${n.id} status: ${isCompleted
               ? 'Completed'
               : 'Not Completed'}');
-          n.channelName == "Reminders" ? print('[YES]') : print('[NO]');
+          n.channelName == "Reminders" ? debugPrint('[YES]') : debugPrint(
+              '[NO]');
           // If the reminder is not completed, show the notification
           if (!isCompleted) {
             await _notificationsPlugin.show(
@@ -278,18 +285,20 @@ class NotificationService {
                 ),
               ),
             );
-            print('[MANUAL] Notification shown → ID: ${n.id}');
+            debugPrint('[MANUAL] Notification shown → ID: ${n.id}');
             n.isShown = true;
           } else {
-          print('[MANUAL] Reminder ${n.id} already completed. Skipping...');
-          n.isShown = true;
-        }
+            debugPrint(
+                '[MANUAL] Reminder ${n.id} already completed. Skipping...');
+            n.isShown = true;
+          }
         }
       }
 
       _manualNotifications.removeWhere((n) => n.isShown);
     });
 
-    print('[MONITOR] Started manual notification checker every ${interval.inSeconds} seconds.');
+    debugPrint('[MONITOR] Started manual notification checker every ${interval
+        .inSeconds} seconds.');
   }
 }

@@ -112,9 +112,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
       }
 
-      print("Token: $token");
-      print("User ID: $userId");
-      print("username: $username");
+      //print("Token: $token");
+      //print("User ID: $userId");
+      //print("username: $username");
 
       await auth_service.AuthService.saveToken(token);
       await auth_service.AuthService.saveUserDetails(userId, username);
@@ -128,7 +128,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (mounted) {
         showAnimatedSnackBar(
           context,
-          "Sign Up Sucessfully",
+          "Sign Up Successfully",
           isSuccess: true,
           isTop: true,
         );

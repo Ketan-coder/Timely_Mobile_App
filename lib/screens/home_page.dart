@@ -2,8 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
-import 'package:lottie/lottie.dart';
-import 'package:timely/auth/user_details_service.dart';
 import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/add_notebook.dart';
@@ -16,9 +14,7 @@ import '../components/text_field.dart';
 import '../models/notebook.dart';
 import '../utils/date_formatter.dart';
 import 'login_screen.dart';
-import 'package:crypto/crypto.dart';
 import 'dart:convert';
-import 'package:intl/intl.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 
 class HomePage extends StatefulWidget {
@@ -33,7 +29,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   final double _titleOpacity = 1.0; // Controls title visibility
   bool _isRefreshing = false;
   String? _token; // Store token
-  Timer? _updateTimer;
+  //Timer? _updateTimer;
   List<Notebook> _filteredNotebooks = [];
   late AnimationController _bookController;
 
@@ -72,16 +68,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
           _notebooks.map((map) => Notebook.fromJson(map)).toList();
       _filterWith = 'all';
       _filterNotebooks();
-      // for (var notebook in _filteredNotebooks) {
-      //   if (notebook.isShared && notebook.sharedWith != null && notebook.sharedWith!.isNotEmpty) {
-      //   // Fetch user details for the first notebook in the filtered list
-      //   await auth_service.AuthService.fetchUserByProfileId(
-      //       _token!, notebook.sharedWith[0]);
-      //   }
-      // } 
-      
     } else {
-      print("Error: Authentication token is null");
+      showAnimatedSnackBar(
+          context, 'You are not Authenticated! Please Login!', isError: true);
     }
     return;
   }
@@ -95,7 +84,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
         _notebooks = notebooks.map((notebook) => notebook.toJson()).toList();
       });
     } catch (e) {
-      print("Error loading notebooks: $e");
+      showAnimatedSnackBar(context, 'Something Went Wrong: $e', isError: true);
     }
   }
 
@@ -226,6 +215,10 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
             .where((notebook) =>
         notebook.priority == 4 || notebook.priority == 5)
             .toList();
+      } else if (_filterWith == 'isShared') {
+        _filteredNotebooks =
+            _notebooks.map((map) => Notebook.fromJson(map)).where((
+                notebook) => notebook.isShared == true).toList();
       } else if (_filterWith == 'all' || _filterWith == null) {
         // If no filter is selected or an invalid filter, show all notebooks
         _filteredNotebooks =
@@ -423,7 +416,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                                 color: Theme
                                     .of(context)
                                     .colorScheme
-                                    .primary ?? Colors.white,
+                                    .primary,
                                 fontSize: 48,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -464,9 +457,9 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                         setState(() {
                           _searchedNotebooks = results;
                         });
-                        print('Search results: ${_searchedNotebooks.length}');
+                        //print('Search results: ${_searchedNotebooks.length}');
                       } else {
-                        print('Search text is empty');
+                        //print('Search text is empty');
                         setState(() {
                           _searchedNotebooks = [];
                           _isSearching = false;
@@ -495,10 +488,19 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               isSmall: true,
                               isGhost: _filterWith != 'all'),
                           MyButton(onPressed: () {
+                            setState(() {
+                              _filterWith = 'isShared';
+                              _filterNotebooks();
+                            });
+                          },
+                              text: 'Notebooks - Shared by you',
+                              isSmall: true,
+                              isGhost: _filterWith != 'isShared'),
+                          MyButton(onPressed: () {
                             Navigator.push(context,
                                 createRoute(BottomNavBar(currentIndex: 3)));
                           },
-                              text: 'Shared Notebooks',
+                              text: 'Notebooks - Shared with you',
                               isSmall: true,
                               isGhost: true),
                           MyButton(onPressed: () {
@@ -628,7 +630,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                               : isShared
                               ? Icon(Icons.share, color: Colors.blue)
                               : SizedBox(),
-                          // isThreeLine: isShared ? true : false,
+                          //isThreeLine: isShared ? true : false,
                           onTap: () async {
                             await _showPasswordInputDialog(
                               context,

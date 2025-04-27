@@ -85,7 +85,8 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
       await _loadReminders();
       setState(() => _isRefreshing = false);
     } else {
-      print("Error: Authentication token is null");
+      showAnimatedSnackBar(
+          context, 'You are not Authenticated, Please Login!', isError: true);
     }
     return;
   }
@@ -99,7 +100,8 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
         _reminders = reminders.map((reminders) => reminders.toJson()).toList();
       });
     } catch (e) {
-      print("Error loading notebooks: $e");
+      showAnimatedSnackBar(
+          context, "Error loading Notebooks: $e", isError: true);
     }
   }
 
@@ -114,14 +116,14 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
   }
 
   void alarmTriggeredCallback() async {
-    print('⏰ Alarm triggered!');
+    //print('⏰ Alarm triggered!');
     await NotificationService.testImmediateNotification();
   }
 
   Future<void> _toggleCompleted(int remaindersId, String remaindersName,
       bool isCompleted) async {
     final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/remainders/${remaindersId}/',
+      'https://timely.pythonanywhere.com/api/v1/remainders/$remaindersId/',
     );
     final response = await http.patch(
       url,
@@ -132,18 +134,18 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
         'is_completed': (!isCompleted).toString(),
       },
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 200) {
       if (isCompleted) {
         _initializeData();
         showAnimatedSnackBar(
             context,
-            "${remaindersName} has been marked In-Complete Successfully",
+            "$remaindersName has been marked In-Complete Successfully",
             isInfo: true, isTop: true);
       } else {
         _initializeData();
         showAnimatedSnackBar(
-            context, "${remaindersName} has been marked Completed Successfully",
+            context, "$remaindersName has been marked Completed Successfully",
             isSuccess: true, isTop: true);
       }
     } else {
@@ -168,15 +170,15 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
         // Send alert_time in ISO format
       },
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 201) {
       _initializeData();
-      print("Response ==>");
-      print(response.body);
+      //print("Response ==>");
+      //print(response.body);
       final responseData = jsonDecode(response.body);
-      int newly_created_reminder = responseData['id'];
-      print("ID ==>");
-      print(newly_created_reminder);
+      int newlyCreatedReminder = responseData['id'];
+      //print("ID ==>");
+      //print(newly_created_reminder);
       showAnimatedSnackBar(
         context,
         "$reminderName Added Successfully",
@@ -194,7 +196,7 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
         //   scheduledDate: alertTime,
         // );
         NotificationService.addManualNotification(
-          id: newly_created_reminder,
+          id: newlyCreatedReminder,
           title: "Reminders",
           body: formatReminderBody(reminderName),
           scheduledDate: alertTime,
@@ -205,12 +207,12 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
         final alarmService = AlarmService();
         alarmService.setAlarm(
           alertTime,
-          newly_created_reminder,
+          newlyCreatedReminder,
           alarmTriggeredCallback,
           reminderName,
           formatReminderBody(reminderName),
         );
-        print('[Notification Scheduled] → $alertTime');
+        //print('[Notification Scheduled] → $alertTime');
       }
     } else {
       showAnimatedSnackBar(
@@ -275,7 +277,7 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
                       }
                     },
                     child: Text(
-                      "Pick Alert Time: ${selectedDateTime}",
+                      "Pick Alert Time: $selectedDateTime",
                       style: TextStyle(color: Theme
                           .of(context)
                           .colorScheme
@@ -318,11 +320,11 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
           'Authorization': 'Token $_token', // Replace with actual token
         }
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 204) {
       _initializeData();
       showAnimatedSnackBar(
-          context, "${reminderName} Removed!", isSuccess: true,
+          context, "$reminderName Removed!", isSuccess: true,
           isTop: true);
     } else {
       showAnimatedSnackBar(
@@ -385,7 +387,7 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
         'alert_time': alertTime.toIso8601String(), // Convert to ISO format
       },
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 200) {
       _initializeData();
       showAnimatedSnackBar(

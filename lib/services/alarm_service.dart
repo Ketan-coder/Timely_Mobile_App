@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'dart:isolate';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/services/notification_service.dart';
 
 
@@ -12,7 +12,7 @@ import 'package:timely/services/notification_service.dart';
 Future<void> printHello() async {
   final DateTime now = DateTime.now();
   final int isolateId = Isolate.current.hashCode;
-  print("[$now] Hello, world! isolate=${isolateId} function='$printHello'");
+  debugPrint("[$now] Hello, world! isolate=$isolateId function='$printHello'");
 }
 
 // This is the top-level function that AndroidAlarmManager will call.  It *must*
@@ -32,7 +32,7 @@ Future<void> _alarmCallback(int id, Map<String, dynamic> data) async {
     alertTime = now; //Or set to a default value
   }
 
-  print("[$now] Alarm with ID $id triggered! isolate=$isolateId");
+  debugPrint("[$now] Alarm with ID $id triggered! isolate=$isolateId");
 
   // Call the function that actually schedules the notification, passing the data.
   _scheduleNotification(id, title, body, alertTime);
@@ -61,10 +61,10 @@ class AlarmService {
   void setAlarm(DateTime alarmTime, int alarmId, Function alarmCallback,
       String title, String body) async {
     try {
-      print('Attempting to set alarm...');
-      print('Alarm Time: $alarmTime');
-      print('Alarm ID: $alarmId');
-      print('Callback Function: ${alarmCallback.runtimeType}');
+      debugPrint('Attempting to set alarm...');
+      debugPrint('Alarm Time: $alarmTime');
+      debugPrint('Alarm ID: $alarmId');
+      debugPrint('Callback Function: ${alarmCallback.runtimeType}');
       if (!kIsWeb && Platform.isAndroid) {
         bool result = await AndroidAlarmManager.oneShotAt(
           alarmTime,
@@ -83,18 +83,19 @@ class AlarmService {
         );
 
         if (result) {
-          print('Alarm successfully set for: $alarmTime with ID: $alarmId');
+          debugPrint(
+              'Alarm successfully set for: $alarmTime with ID: $alarmId');
         } else {
-          print('Failed to set alarm for: $alarmTime with ID: $alarmId');
+          debugPrint('Failed to set alarm for: $alarmTime with ID: $alarmId');
         }
       }
     } catch (e) {
-      print('Error while setting alarm: $e');
+      debugPrint('Error while setting alarm: $e');
     }
   }
 
   void cancelAlarm(int alarmId) async {
     await AndroidAlarmManager.cancel(alarmId);
-    print('Alarm with ID $alarmId cancelled');
+    debugPrint('Alarm with ID $alarmId cancelled');
   }
 }

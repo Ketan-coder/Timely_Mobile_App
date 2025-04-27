@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
-import 'package:intl/intl.dart';
 import 'package:timely/components/custom_loading_animation.dart';
-
+import 'package:timely/components/custom_snack_bar.dart';
 import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
 import '../components/text_field.dart';
@@ -25,7 +24,8 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
 
   List<Map<String, dynamic>> _sharedNotebooks = [];
   List<Map<String, dynamic>> _publicNotebooks = [];
-  final double _titleOpacity = 1.0; // Controls title visibility
+
+  //final double _titleOpacity = 1.0; // Controls title visibility
   String? _token; // Store token
 
   @override
@@ -57,7 +57,8 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
       await _loadSharedNotebooks();
       setState(() => _isRefreshing = false);
     } else {
-      print("Error: Authentication token is null");
+      showAnimatedSnackBar(
+          context, "You are not Authenticated, Please Login!", isError: true);
     }
     return;
   }
@@ -75,7 +76,8 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
             publicNotebooks.map((notebook) => notebook.toJson()).toList();
       });
     } catch (e) {
-      print("Error loading notebooks: $e");
+      showAnimatedSnackBar(
+          context, "Error loading Notebook: $e", isError: true);
     }
   }
 
@@ -181,8 +183,7 @@ class SharedTab extends StatefulWidget {
 
   //SharedTab({super.key, required this.sharedNotebooks});
   SharedTab(
-      {Key? key, required this.sharedNotebooks, required this.isRefreshing, required this.token})
-      : super(key: key);
+      {super.key, required this.sharedNotebooks, required this.isRefreshing, required this.token});
 
   @override
   State<SharedTab> createState() => _SharedTabState();
@@ -218,10 +219,6 @@ class _SharedTabState extends State<SharedTab> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final imageUrl = isDarkMode
-        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
-        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       body: NotificationListener<ScrollNotification>(
@@ -266,8 +263,10 @@ class _SharedTabState extends State<SharedTab> with SingleTickerProviderStateMix
                             "Shared\nNotebooks",
                             style: TextStyle(
                               color:
-                              Theme.of(context).colorScheme.primary ??
-                                  Colors.white,
+                              Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary,
                               fontSize: 48,
                               fontWeight: FontWeight.w700,
                             ),
@@ -308,10 +307,10 @@ class _SharedTabState extends State<SharedTab> with SingleTickerProviderStateMix
                       setState(() {
                         _searchedSharedNotebooks = results;
                       });
-                      print(
-                          'Search results: ${_searchedSharedNotebooks.length}');
+                      //print(
+                      //    'Search results: ${_searchedSharedNotebooks.length}');
                     } else {
-                      print('Search text is empty');
+                      //print('Search text is empty');
                       setState(() {
                         _searchedSharedNotebooks = [];
                         _isSearching = false;
@@ -428,10 +427,6 @@ class _PublicTabState extends State<PublicTab> with SingleTickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final imageUrl = isDarkMode
-        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
-        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.inverseSurface,
       body: NotificationListener<ScrollNotification>(
@@ -479,8 +474,7 @@ class _PublicTabState extends State<PublicTab> with SingleTickerProviderStateMix
                               Theme
                                   .of(context)
                                   .colorScheme
-                                  .primary ??
-                                  Colors.white,
+                                  .primary,
                               fontSize: 48,
                               fontWeight: FontWeight.w700,
                             ),
@@ -521,9 +515,9 @@ class _PublicTabState extends State<PublicTab> with SingleTickerProviderStateMix
                       setState(() {
                         _searchedNotebooks = results;
                       });
-                      print('Search results: ${_searchedNotebooks.length}');
+                      //print('Search results: ${_searchedNotebooks.length}');
                     } else {
-                      print('Search text is empty');
+                      //print('Search text is empty');
                       setState(() {
                         _searchedNotebooks = [];
                         _isSearching = false;
@@ -547,7 +541,7 @@ class _PublicTabState extends State<PublicTab> with SingleTickerProviderStateMix
                     //notebook = widget.publicNotebooks[index];
                     notebook = Notebook.fromJson(widget.publicNotebooks[index]);
                   }
-                  print('Notebook Data ==> $notebook');
+                  //print('Notebook Data ==> $notebook');
                   //bool isProtected = notebook['is_password_protected'] ?? false;
                   bool isProtected = notebook.isPasswordProtected ?? false;
                   return Padding(

@@ -54,7 +54,8 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
       await _loadTodos();
       setState(() => _isRefreshing = false);
     } else {
-      print("Error: Authentication token is null");
+      showAnimatedSnackBar(
+          context, "You are not Authenticated, Please Login!", isError: true);
     }
     return;
   }
@@ -68,7 +69,8 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
         _todos = todos.map((todos) => todos.toJson()).toList();
       });
     } catch (e) {
-      print("Error loading notebooks: $e");
+      showAnimatedSnackBar(
+          context, "Error loading Notebooks: $e", isError: true);
     }
   }
 
@@ -86,7 +88,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
   Future<void> _toggleCompleted(int todoId, String todoName,
       bool isCompleted) async {
     final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/todos/${todoId}/',
+      'https://timely.pythonanywhere.com/api/v1/todos/$todoId/',
     );
     final response = await http.patch(
       url,
@@ -97,17 +99,17 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
         'is_completed': (!isCompleted).toString(),
       },
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 200) {
       if (isCompleted) {
         _initializeData();
         showAnimatedSnackBar(
-            context, "${todoName} has been marked In-Complete Successfully",
+            context, "$todoName has been marked In-Complete Successfully",
             isInfo: true, isTop: true);
       } else {
         _initializeData();
         showAnimatedSnackBar(
-            context, "${todoName} has been marked Completed Successfully",
+            context, "$todoName has been marked Completed Successfully",
             isSuccess: true, isTop: true);
       }
     } else {
@@ -129,11 +131,11 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
         'title': todoName.trim(),
       },
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 201) {
       _initializeData();
       showAnimatedSnackBar(
-          context, "${todoName} Added Successfully", isSuccess: true,
+          context, "$todoName Added Successfully", isSuccess: true,
           isTop: true);
     } else {
       showAnimatedSnackBar(
@@ -151,11 +153,11 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
           'Authorization': 'Token $_token', // Replace with actual token
         }
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 204) {
       _initializeData();
       showAnimatedSnackBar(
-          context, "${todoName} Removed!", isSuccess: true,
+          context, "$todoName Removed!", isSuccess: true,
           isTop: true);
     } else {
       showAnimatedSnackBar(

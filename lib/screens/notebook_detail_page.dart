@@ -14,7 +14,6 @@ import '../auth/auth_service.dart' as auth_service;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../components/bottom_nav_bar.dart';
-
 import '../models/profile.dart';
 import '../models/shared_notebook.dart';
 import '../utils/date_formatter.dart';
@@ -183,7 +182,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
     if (response.statusCode == 200) {
       setState(() {
         _notebookData = jsonDecode(response.body);
-        print(_notebookData);
+        //print(_notebookData);
       });
       final userDetails = await UserStorageHelper.getUserDetails();
       List<SharedNotebook> sharedNotebookDetails = await auth_service
@@ -432,8 +431,8 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
       final List<String> subpageUuids = List<String>.from(
         notebookData['sugpages'] ?? [],
       );
-      print(subpageUuids);
-      print("Subpages = ^");
+      //print(subpageUuids);
+      //print("Subpages = ^");
 
       if (subpageUuids.isEmpty) {
         return []; // No pages found
@@ -442,7 +441,8 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
       // Fetch subpages in parallel instead of sequentially
       final List<Map<String, dynamic>?> subpages = await Future.wait(
         subpageUuids.map(
-          (uuid) => auth_service.AuthService.fetchSubPageDetails(uuid, _token),
+              (uuid) =>
+              auth_service.AuthService.fetchSubPageDetails(uuid, _token),
         ),
       );
 
@@ -615,15 +615,15 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
                           } else {
                             final data = snapshot.data!;
                             final List<Map<String, dynamic>> pages =
-                                List<Map<String, dynamic>>.from(
-                                  data['pages'] ?? [],
-                                );
+                            List<Map<String, dynamic>>.from(
+                              data['pages'] ?? [],
+                            );
                             final List<Map<String, dynamic>> subpages =
-                                List<Map<String, dynamic>>.from(
-                                  data['sugpages'] ?? [],
-                                );
-                            print("Subpagess=>");
-                            print(subpages);
+                            List<Map<String, dynamic>>.from(
+                              data['sugpages'] ?? [],
+                            );
+                            //print("Subpagess=>");
+                            //print(subpages);
                             return ListView.builder(
                               padding: const EdgeInsets.all(16),
                               itemCount: pages.length,
@@ -762,14 +762,13 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
       List<ProfileModel> sharedUsers) {
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       backgroundColor: Theme
           .of(context)
           .colorScheme
           .surface,
-      //barrierColor: Theme.of(context).colorScheme.primary,
       builder: (context) {
         return Container(
           padding: const EdgeInsets.all(16.0),
@@ -782,44 +781,110 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
               top: Radius.circular(16),
             ),
           ),
-          child: sharedUsers.isNotEmpty
-              ? ListView.builder(
-            itemCount: sharedUsers.length,
-            itemBuilder: (context, index) {
-              final user = sharedUsers[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Theme
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title Section
+              Text(
+                "Notebook is shared with",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme
                       .of(context)
                       .colorScheme
                       .primary,
-                  child: Text(user.firstName[0].toUpperCase(),
-                      style: TextStyle(color: Theme
-                          .of(context)
-                          .colorScheme
-                          .surface)),
                 ),
-                isThreeLine: user.user?.lastLogin != null ? true : false,
-                title: Text("${user.firstName} ${user.lastName}",
-                    style: TextStyle(color: Theme
+              ),
+              const SizedBox(height: 16),
+              // List Section
+              sharedUsers.isNotEmpty
+                  ? Expanded(
+                child: ListView.builder(
+                  itemCount: sharedUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = sharedUsers[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Theme
+                            .of(context)
+                            .colorScheme
+                            .primary,
+                        child: Text(
+                          user.firstName[0].toUpperCase(),
+                          style: TextStyle(
+                            color: Theme
+                                .of(context)
+                                .colorScheme
+                                .surface,
+                          ),
+                        ),
+                      ),
+                      isThreeLine: user.user?.lastLogin != null ? true : false,
+                      title: Text(
+                        "${user.firstName} ${user.lastName}",
+                        style: TextStyle(
+                          color: Theme
+                              .of(context)
+                              .colorScheme
+                              .primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        user.user?.lastLogin != null
+                            ? "${user.email}\nLast Login: ${user.user
+                            ?.lastLogin}"
+                            : user.email,
+                        style: TextStyle(
+                          color: Theme
+                              .of(context)
+                              .colorScheme
+                              .primary,
+                        ),
+                      ),
+                      trailing: widget.canEdit
+                          ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.edit,
+                            color: Theme
+                                .of(context)
+                                .colorScheme
+                                .primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Can Edit",
+                            style: TextStyle(
+                              color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      )
+                          : const SizedBox(),
+                    );
+                  },
+                ),
+              )
+                  : Center(
+                child: Text(
+                  "No shared users found.",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme
                         .of(context)
                         .colorScheme
-                        .primary)),
-                subtitle: Text(
-                    user.user?.lastLogin != null ? "${user.email} \n ${user.user
-                        ?.lastLogin}" : user.email,
-                    style: TextStyle(color: Theme
-                        .of(context)
-                        .colorScheme
-                        .primary)),
-              );
-            },
-          )
-              : Center(
-            child: Text(
-              "No shared users found.",
-              style: TextStyle(fontSize: 16),
-            ),
+                        .primary,
+                  ),
+                ),
+              ),
+            ],
           ),
         );
       },
@@ -827,12 +892,13 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   }
 
 
+
   void _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      print("Could not launch $url");
+      showAnimatedSnackBar(context, 'Could not launch $url');
     }
   }
 
@@ -857,31 +923,32 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
             .primary,
       ),
       persistentFooterButtons: [
-        !_dataReady
-            ? Container(
-              padding: EdgeInsets.all(5),
-              child: CustomLoadingElement(
-                bookController: _actionsController,
-                width: 70,
-                height: 70,
-                padding: EdgeInsets.all(10),
-                margin: EdgeInsets.only(top: 0),
-                icon: Icons8.edit,
-                iconColor: Theme.of(context).colorScheme.surface,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            )
-            : widget.canEdit
+        //!_dataReady
+        //? Container(
+        //  padding: EdgeInsets.all(5),
+        //  child: CustomLoadingElement(
+        //    bookController: _actionsController,
+        //    width: 70,
+        //    height: 70,
+        //    padding: EdgeInsets.all(10),
+        //    margin: EdgeInsets.only(top: 0),
+        //    icon: Icons8.edit_ok,
+        //    iconColor: Theme.of(context).colorScheme.surface,
+        //    backgroundColor: Theme.of(context).colorScheme.primary,
+        //  ),
+        //)
+        //:
+        widget.canEdit
             ? Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: Container(
-                    padding: const EdgeInsets.all(8.0),
-                    margin: const EdgeInsets.all(5),
-                    // color: Colors.black,
-                    decoration: BoxDecoration(
-                      color: isFavourite ? Colors.red[100] : Colors.transparent,
+          children: [
+            Expanded(
+              flex: 4,
+              child: Container(
+                padding: const EdgeInsets.all(8.0),
+                margin: const EdgeInsets.all(5),
+                // color: Colors.black,
+                decoration: BoxDecoration(
+                  color: isFavourite ? Colors.red[100] : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
                         color: Colors.deepPurple.shade100,

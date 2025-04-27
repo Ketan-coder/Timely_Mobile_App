@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:timely/components/custom_snack_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -59,7 +60,7 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
     if (response.statusCode == 200) {
       setState(() {
         _subpageData = jsonDecode(response.body);
-        print(_subpageData);
+        //print(_subpageData);
         _isLoading = false;
       });
 
@@ -116,11 +117,11 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
         'Authorization': 'Token $_token', // Replace with actual token
       },
     );
-    print(response);
+    //print(response);
     if (response.statusCode == 204) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${pageName} has been Deleted Successfully'),
+          content: Text('$pageName has been Deleted Successfully'),
           backgroundColor: Colors.green,
         ),
       );
@@ -145,7 +146,7 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      print("Could not launch $url");
+      showAnimatedSnackBar(context, "Could not launch $url", isError: true);
     }
   }
 
