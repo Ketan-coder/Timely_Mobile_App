@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:http/http.dart' as http;
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/custom_loading_animation.dart';
@@ -469,86 +470,119 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                           Padding(
                             padding: EdgeInsets.only(
                                 top: 12, left: 5, right: 5),
-                            child: ListTile(
-                              textColor: Theme
-                                  .of(context)
-                                  .colorScheme
-                                  .surface,
-                              title: Text(
-                                todo['title'] ?? 'Untitled',
-                                style: TextStyle(
-                                  color: Theme
-                                      .of(context)
-                                      .colorScheme
-                                      .primary,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  fontFamily: 'Sora',
+                            child: Slidable(
+                              key: ValueKey(todo['id']),
+                              endActionPane: ActionPane(
+                                motion: const DrawerMotion(),
+                                children: [
+                                  SlidableAction(
+                                    onPressed: (context) async {
+                                      await _deleteTodo(
+                                          context, todo['id'], todo['title']);
+                                    },
+                                    backgroundColor: Theme
+                                        .of(context)
+                                        .colorScheme
+                                        .error,
+                                    foregroundColor: Theme
+                                        .of(context)
+                                        .colorScheme
+                                        .errorContainer,
+                                    icon: Icons.delete_forever,
+                                    label: 'Delete',
+                                  ),
+                                ],
+                              ),
+                              child: ListTile(
+                                textColor: Theme
+                                    .of(context)
+                                    .colorScheme
+                                    .surface,
+                                title: Text(
+                                  todo['title'] ?? 'Untitled',
+                                  style: TextStyle(
+                                    color: Theme
+                                        .of(context)
+                                        .colorScheme
+                                        .primary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                    fontFamily: 'Sora',
+                                  ),
                                 ),
+                                subtitle: Text('Last updated: ${formatDateTime(
+                                    todo['updated_at'])}'),
+                                //trailing: IconButton(
+                                //  onPressed: () async {
+                                //    await _deleteTodo(
+                                //        context, todo['id'], todo['title']);
+                                //  },
+                                //  icon: Icon(Icons.delete, color: Colors.grey),
+                                //),
+                                leading: IconButton(
+                                  icon: Icon(Icons.check_circle),
+                                  onPressed: () async {
+                                    await _toggleCompleted(
+                                        todo['id'], todo['title'], false);
+                                  },
+                                ),
+                                onTap: () => _editTodo(context, todo),
                               ),
-                              subtitle: Text('Last updated: ${formatDateTime(
-                                  todo['updated_at'])}'),
-                              trailing: IconButton(
-                                onPressed: () async {
-                                  await _deleteTodo(
-                                      context, todo['id'], todo['title']);
-                                },
-                                icon: Icon(Icons.delete, color: Colors.grey),
-                              ),
-                              leading: IconButton(
-                                icon: Icon(Icons.check_circle),
-                                onPressed: () async {
-                                  await _toggleCompleted(
-                                      todo['id'], todo['title'], false);
-                                },
-                              ),
-                              onLongPress: () => _editTodo(context, todo),
                             ),
                           ))
                           .toList(),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 5.0, horizontal: 15.0),
-                        child: const Divider(thickness: 1,),
-                      ),
+
                       // ✅ Completed Section Collapsible Header
                       if (_todos.any((todo) => todo['is_completed'] == true))
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _isCompletedExpanded = !_isCompletedExpanded;
-                            });
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 10),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 18.0),
-                                  child: Text(
-                                    "Completed Todos",
-                                    style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 18.0),
-                                  child: Icon(
-                                    _isCompletedExpanded
-                                        ? Icons.keyboard_arrow_up
-                                        : Icons.keyboard_arrow_down,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              ],
+                        Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 5.0, horizontal: 15.0),
+                              child: const Divider(thickness: 1,),
                             ),
-                          ),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _isCompletedExpanded = !_isCompletedExpanded;
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 10),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment
+                                      .spaceBetween,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          left: 18.0),
+                                      child: Text(
+                                        "Completed Todos",
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                          right: 18.0),
+                                      child: Icon(
+                                        _isCompletedExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+
 
                       // 🏁 Completed Tasks Section (shown only if expanded)
                       if (_isCompletedExpanded)
@@ -589,7 +623,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                                         todo['id'], todo['title'], true);
                                   },
                                 ),
-                                onTap: () {},
+                                onTap: () => _editTodo(context, todo),
                               ),
                             ))
                             .toList(),

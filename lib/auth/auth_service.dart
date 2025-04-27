@@ -244,8 +244,8 @@ class AuthService {
 
         final List<dynamic> data = jsonResponse['results'];
 
-        print("Notebooks fetched successfully!");
-        print("Notebook Data: ${jsonEncode(data)}");
+        print("Public Notebooks fetched successfully!");
+        print("Public Notebook Data: ${jsonEncode(data)}");
 
         // Ensure items in 'data' are maps before conversion
         List<Notebook> notebooks = data

@@ -531,15 +531,15 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
             child: Icon(Icons.add),
           ),
           SizedBox(width: 12), // Adds spacing between buttons
-          FloatingActionButton(
-            heroTag: 'Reminder TEST BUTTON',
-            tooltip: "Reminder TEST BUTTON",
-            onPressed: () {
-              Navigator.of(context).push(
-                  createRoute(const NotificationTestPage()));
-            },
-            child: Icon(Icons.telegram),
-          ),
+          //FloatingActionButton(
+          //  heroTag: 'Reminder TEST BUTTON',
+          //  tooltip: "Reminder TEST BUTTON",
+          //  onPressed: () {
+          //    Navigator.of(context).push(
+          //        createRoute(const NotificationTestPage()));
+          //  },
+          //   child: Icon(Icons.telegram),
+          //),
         ],
       ),
       body: NotificationListener<ScrollNotification>(
