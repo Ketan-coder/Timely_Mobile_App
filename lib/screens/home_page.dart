@@ -132,14 +132,24 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                 children: [
                   Text("Enter the password to access '$notebookName'."),
                   const SizedBox(height: 10),
-                  TextField(
-                    controller: passwordController,
-                    obscureText: true, // Hide password input
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      errorText: isWrongPassword ? "Incorrect password" : null,
-                    ),
-                  ),
+                  MyTextField(
+                    controller: passwordController, 
+                    hintext: "Password", 
+                    obscuretext: true, 
+                    prefixicon: Icon(Icons.lock),
+                    width: 70, 
+                    height: 20, 
+                    maxlines: 1,
+                    errorText: isWrongPassword ? "Incorrect password" : null,
+                    )
+                  // TextField(
+                  //   controller: passwordController,
+                  //   obscureText: true, // Hide password input
+                  //   decoration: InputDecoration(
+                  //     labelText: "Password",
+                  //     errorText: isWrongPassword ? "Incorrect password" : null,
+                  //   ),
+                  // ),
                 ],
               ),
               actions: [

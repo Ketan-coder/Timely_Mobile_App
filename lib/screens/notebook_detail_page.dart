@@ -644,12 +644,16 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
                                   children: [
                                     GestureDetector(
                                       onTap: () {
+                                        print("Can Edit: ${widget.canEdit}");
+                                        print("Can Delete: ${widget.canDelete}");
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder:
                                                 (context) => PageDetailsPage(
                                                   pageUuid: pageUuid,
+                                                  canEdit: widget.canEdit,
+                                                  canDelete: widget.canDelete,
                                                 ),
                                           ),
                                         );
@@ -718,6 +722,9 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
                                                     ) => SubPageDetailsPage(
                                                       subpageUuid:
                                                           sub['subpage_uuid'],
+                                                      canEdit: widget.canEdit,
+                                                      canDelete:
+                                                          widget.canDelete,
                                                     ),
                                               ),
                                             );

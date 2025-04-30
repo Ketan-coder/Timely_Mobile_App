@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/components/button.dart';
 import 'package:timely/components/labels.dart';
 import 'package:timely/screens/sign_up_screen.dart';
@@ -25,9 +26,51 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  int? _loginAttempts = 0;
+  DateTime? _firstFailedLoginTime;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLoginAttemptData();
+  }
+
+  Future<void> _loadLoginAttemptData() async {
+    final prefs = await SharedPreferences.getInstance();
+    _loginAttempts = prefs.getInt('login_attempts') ?? 0;
+    final firstAttemptString = prefs.getString('first_failed_login_time');
+    if (firstAttemptString != null) {
+      _firstFailedLoginTime = DateTime.tryParse(firstAttemptString);
+      _checkLoginReset();  // Optional immediate check
+    }
+  }
+
+
+  Future<void> _checkLoginReset() async {
+    if (_firstFailedLoginTime == null) return;
+
+    final timePassed = DateTime.now().difference(_firstFailedLoginTime!);
+    if (timePassed >= const Duration(minutes: 5)) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('login_attempts');
+      await prefs.remove('first_failed_login_time');
+
+      setState(() {
+        _loginAttempts = 0;
+        _firstFailedLoginTime = null;
+      });
+    }
+  }
 
 
   Future<void> _login() async {
+    _checkLoginReset(); // Check if we need to reset login attempts
+    if (_loginAttempts != null && _loginAttempts! >= 3) {
+      showAnimatedSnackBar(
+          context, "Too many Failed login attempts. Please try again after 5 minutes.",
+          isError: true, isTop: true);
+      return;
+    }
     if (_usernameController.text
         .trim()
         .isEmpty) {
@@ -102,6 +145,15 @@ class _LoginPageState extends State<LoginPage> {
     } else {
       showAnimatedSnackBar(
           context, "Invalid credentials", isError: true, isTop: true);
+        final prefs = await SharedPreferences.getInstance();
+        setState(() {
+          if (_loginAttempts == 0) {
+            _firstFailedLoginTime = DateTime.now();
+            prefs.setString('first_failed_login_time', _firstFailedLoginTime!.toIso8601String());
+          }
+          _loginAttempts = (_loginAttempts ?? 0) + 1;
+          prefs.setInt('login_attempts', _loginAttempts!);
+        });
     }
 
     setState(() {

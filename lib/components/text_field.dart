@@ -12,6 +12,8 @@ class MyTextField extends StatefulWidget {
   final suffixicon;
   final onChanged;
   final onTap;
+  final String? errorText;
+  final String? labelText;
 
   const MyTextField({super.key,
     required this.controller,
@@ -24,6 +26,8 @@ class MyTextField extends StatefulWidget {
     required this.maxlines,
     this.suffixicon,
     this.onChanged,
+    this.errorText,
+    this.labelText,
     this.onTap,
   });
 
@@ -36,6 +40,7 @@ class _MyTextFieldState extends State<MyTextField> {
   int _hintIndex = 0;
   int _charIndex = 0;
   bool _isTyping = false;
+  bool _showPassword = false;
 
   @override
   void initState() {
@@ -113,10 +118,20 @@ class _MyTextFieldState extends State<MyTextField> {
               .inverseSurface,
         ),
         controller: widget.controller,
-        obscureText: widget.obscuretext,
+        obscureText: widget.obscuretext ? !_showPassword : widget.obscuretext,
         maxLines: widget.maxlines,
         onChanged: widget.onChanged,
         decoration: InputDecoration(
+          errorText: widget.errorText,
+          labelText: widget.labelText,
+          errorStyle: TextStyle(
+            color: Theme
+                .of(context)
+                .colorScheme
+                .error,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
           enabledBorder: OutlineInputBorder(
             borderSide: BorderSide(width: 2, color: Theme
                 .of(context)
@@ -127,7 +142,21 @@ class _MyTextFieldState extends State<MyTextField> {
               horizontal: widget.width, vertical: widget.height),
           // Adjust these values.
           prefixIcon: widget.prefixicon,
-          suffixIcon: widget.suffixicon,
+          suffixIcon: widget.obscuretext
+              ? IconButton(
+                  icon: Icon(
+                    _showPassword
+                        ? Icons.visibility
+                        : Icons.visibility_off,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _showPassword = !_showPassword;
+                    });
+                  },
+                )
+              : widget.suffixicon,
           fillColor: Theme
               .of(context)
               .colorScheme

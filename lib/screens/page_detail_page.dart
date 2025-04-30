@@ -13,8 +13,10 @@ import '../utils/date_formatter.dart';
 
 class PageDetailsPage extends StatefulWidget {
   final String pageUuid;
+  late bool canEdit;
+  late bool canDelete;
 
-  PageDetailsPage({super.key, required this.pageUuid});
+  PageDetailsPage({super.key, required this.pageUuid, this.canDelete = false, this.canEdit = false});
 
   @override
   State<PageDetailsPage> createState() => _PageDetailsPageState();
@@ -285,7 +287,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                             itemBuilder: (context, index) {
                               return GestureDetector(
                                 onTap: () {
-                                  Navigator.push(context,MaterialPageRoute(builder: (context) => SubPageDetailsPage(subpageUuid: pages[index]['subpage_uuid'],),),);
+                                  Navigator.push(context,MaterialPageRoute(builder: (context) => SubPageDetailsPage(subpageUuid: pages[index]['subpage_uuid'],canEdit: widget.canEdit,canDelete: widget.canDelete,),),);
                                 },
                                 child: ListTile(
                                   leading: Container(
@@ -354,7 +356,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
             .secondary,
       ),
       persistentFooterButtons: [
-        Row(
+        widget.canEdit ? Row(
           children: [
             Expanded(
               flex: 4,
@@ -376,7 +378,7 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                 ),
               ),
             ),
-            Expanded(
+            widget.canDelete ? Expanded(
               child: Container(
                 padding: const EdgeInsets.all(8.0),
                 margin: const EdgeInsets.all(5),
@@ -399,9 +401,9 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                   icon: const Icon(Icons.delete_forever_rounded),
                 ),
               ),
-            ),
+            ): SizedBox(),
           ],
-        ),
+        ): SizedBox(),
       ],
       floatingActionButton: FloatingActionButton(
         //check if the note is favorite or not and change the icon as needed

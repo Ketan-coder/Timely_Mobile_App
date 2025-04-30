@@ -11,8 +11,10 @@ import '../utils/date_formatter.dart';
 
 class SubPageDetailsPage extends StatefulWidget {
   final String subpageUuid;
+  late bool canEdit;
+  late bool canDelete;
 
-  SubPageDetailsPage({super.key, required this.subpageUuid});
+  SubPageDetailsPage({super.key, required this.subpageUuid, this.canEdit = false, this.canDelete = false});
 
   @override
   State<SubPageDetailsPage> createState() => _SubPageDetailsPageState();
@@ -165,7 +167,7 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
             .secondary,
       ),
       persistentFooterButtons: [
-        Row(
+       widget.canEdit ? Row(
           children: [
             Expanded(
               flex: 4,
@@ -187,7 +189,7 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
                 ),
               ),
             ),
-            Expanded(
+            widget.canDelete ? Expanded(
               child: Container(
                 padding: const EdgeInsets.all(8.0),
                 margin: const EdgeInsets.all(5),
@@ -210,9 +212,9 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
                   icon: const Icon(Icons.delete_forever_rounded),
                 ),
               ),
-            ),
+            ) : const SizedBox(),
           ],
-        ),
+        ) : SizedBox(),
       ],
       // floatingActionButton: FloatingActionButton(
       //   //check if the note is favorite or not and change the icon as needed
