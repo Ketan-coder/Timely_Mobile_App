@@ -29,6 +29,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final TextEditingController _passwordConfirmController =
   TextEditingController();
   bool _isLoading = false;
+  final _scrollController = ScrollController();
 
   // Not completed, because API isn't Build for this!
   Future<void> _signUp() async {
@@ -185,6 +186,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       // appBar: AppBar(title: const Text('Login')),
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .inverseSurface,
+      resizeToAvoidBottomInset: true,
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         physics: PageScrollPhysics(),
@@ -226,6 +232,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       height: 20,
                       maxlines: 1,
                       prefixicon: Icon(Icons.edit),
+                      onTap: () {
+
+                      },
                     ),
                   ),
                   Expanded(
@@ -283,19 +292,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 child: Center(child: const CircularProgressIndicator()),
               )
                   : MyButton(onPressed: () => _signUp(), text: "Register"),
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(createRoute(const LoginPage()));
-                },
-                child: Container(
-                  margin: EdgeInsets.only(left: 120),
-                  child: MyLabel(
-                    text: "Already have a Account? Login",
-                    size: 15,
-                    color: Theme
-                        .of(context)
-                        .colorScheme
-                        .primary,
+              Center(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(createRoute(const LoginPage()));
+                  },
+                  child: Container(
+                    margin: EdgeInsets.only(left: 120),
+                    child: MyLabel(
+                      text: "Already have a Account? Login",
+                      size: 15,
+                      color: Theme
+                          .of(context)
+                          .colorScheme
+                          .primary,
+                    ),
                   ),
                 ),
               ),

@@ -11,6 +11,7 @@ class MyTextField extends StatefulWidget {
   final int maxlines;
   final suffixicon;
   final onChanged;
+  final onTap;
 
   const MyTextField({super.key,
     required this.controller,
@@ -23,6 +24,7 @@ class MyTextField extends StatefulWidget {
     required this.maxlines,
     this.suffixicon,
     this.onChanged,
+    this.onTap,
   });
 
   @override
@@ -99,6 +101,7 @@ class _MyTextFieldState extends State<MyTextField> {
     return Padding(
       padding: const EdgeInsets.all(10.0),
       child: TextField(
+        onTap: widget.onTap,
         style: TextStyle(
           color: Theme
               .of(context)

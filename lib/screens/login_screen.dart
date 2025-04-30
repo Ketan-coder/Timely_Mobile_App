@@ -160,6 +160,10 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       // appBar: AppBar(title: const Text('Login')),
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .inverseSurface,
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -199,17 +203,19 @@ class _LoginPageState extends State<LoginPage> {
                 ? Padding(padding: const EdgeInsets.all(8.0),
                 child: Center(child: const CircularProgressIndicator()))
                 : MyButton(onPressed: _login, text: "Login"),
-            GestureDetector(onTap: () {
-              Navigator.of(context).push(createRoute(const SignUpScreen()),
-              );
-            },
-              child: Container(margin: EdgeInsets.only(left: 120),
-                  child: MyLabel(text: "Don't have account? Sign Up",
-                      size: 15,
-                      color: Theme
-                          .of(context)
-                          .colorScheme
-                          .primary)),)
+            Center(
+              child: GestureDetector(onTap: () {
+                Navigator.of(context).push(createRoute(const SignUpScreen()),
+                );
+              },
+                child: Container(margin: EdgeInsets.only(left: 120),
+                    child: MyLabel(text: "Don't have account? Sign Up",
+                        size: 15,
+                        color: Theme
+                            .of(context)
+                            .colorScheme
+                            .primary)),),
+            )
           ],
         ),
       ),
