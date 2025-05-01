@@ -49,6 +49,7 @@ dependencies:
   flutter_animated_icons: ^1.0.1
   lottie: ^1.4.3
   flutter_slidable: ^4.0.0
+  local_auth: ^2.3.0
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3

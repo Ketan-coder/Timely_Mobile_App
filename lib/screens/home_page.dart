@@ -16,6 +16,8 @@ import '../utils/date_formatter.dart';
 import 'login_screen.dart';
 import 'dart:convert';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:local_auth/local_auth.dart';
+import '../services/biometric_auth.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,7 +26,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage>
+    with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>> _notebooks = [];
   final double _titleOpacity = 1.0; // Controls title visibility
   bool _isRefreshing = false;
@@ -32,6 +35,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
   //Timer? _updateTimer;
   List<Notebook> _filteredNotebooks = [];
   late AnimationController _bookController;
+  final BiometricAuth biometricAuth = BiometricAuth();
 
 
   @override
@@ -41,7 +45,8 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     _bookController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
-    )..repeat();
+    )
+      ..repeat();
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -108,53 +113,142 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
     return inputedPassword == realPasswordHash;
   }
 
-  Future<void> _showPasswordInputDialog(BuildContext context, int notebookID, String notebookName, String realPasswordHash, bool isPasswordProtected) async {
+  Future<void> _showPasswordInputDialog(BuildContext context,
+      int notebookID,
+      String notebookName,
+      String realPasswordHash,
+      bool isPasswordProtected,) async {
+    // If the notebook isn't password protected, just navigate to it.
     if (!isPasswordProtected) {
-      Navigator.of(context).push(createRoute(NotebookDetailPage(
-          notebookId: notebookID, isPasswordProtected: isPasswordProtected)));
-      return; // Stop execution, no need to show password dialog
+      Navigator.of(context).push(createRoute(
+        NotebookDetailPage(
+          notebookId: notebookID,
+          isPasswordProtected: isPasswordProtected,
+        ),
+      ));
+      return;
     }
 
+    // Flag to decide whether to show the password dialog.
+    bool showPasswordDialog = true;
+
+    // Check biometric availability.
+    bool canUseBiometrics = await biometricAuth.isBiometricAvailable();
+    bool hasBiometrics = await biometricAuth.hasEnrolledBiometrics();
+
+    if (canUseBiometrics && hasBiometrics) {
+      int failedAttempts = 0;
+      bool isAuthenticated = false;
+
+      // Allow up to 3 biometric attempts.
+      while (failedAttempts < 3 && !isAuthenticated) {
+        try {
+          isAuthenticated = await biometricAuth.biometricAuthenticate(
+            reason: 'Authenticate to unlock "$notebookName"',
+          );
+
+          if (!isAuthenticated) {
+            failedAttempts++;
+            if (failedAttempts < 3) {
+              showAnimatedSnackBar(
+                context,
+                "Authentication failed. Attempt $failedAttempts/3",
+                isError: true,
+                isTop: true,
+              );
+            }
+          }
+        } catch (e) {
+          if (e.toString().contains("CANCELLED_BY_USER")) {
+            print(e.toString());
+            break; // Exit the biometric loop and go to password dialog
+          }
+          // User cancelled biometric prompt
+          showAnimatedSnackBar(
+            context,
+            "Authentication cancelled by user.",
+            isError: true,
+            isTop: true,
+          );
+          return;
+        }
+      }
+
+
+      if (isAuthenticated) {
+        // Successful biometric authentication: navigate to the notebook and skip the password dialog.
+        Navigator.of(context).push(createRoute(
+          NotebookDetailPage(
+            notebookId: notebookID,
+            isPasswordProtected: isPasswordProtected,
+          ),
+        ));
+        showPasswordDialog = false;
+      } else {
+        showAnimatedSnackBar(
+          context,
+          "Biometric authentication failed! Please use password.",
+          isError: true,
+          isTop: true,
+        );
+      }
+    } else {
+      // Biometrics not available or not enrolled.
+      showAnimatedSnackBar(
+        context,
+        "Biometric not available",
+        isError: true,
+        isTop: true,
+      );
+    }
+
+    // Only show the password dialog if we haven't authenticated via biometrics.
+    if (!showPasswordDialog) return;
+
+    // Show password input dialog fallback.
     TextEditingController passwordController = TextEditingController();
     bool isWrongPassword = false;
 
     return showDialog<void>(
       context: context,
-      barrierDismissible: false, // Prevent closing when tapping outside
+      barrierDismissible: false, // Prevent closing when tapping outside.
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+              backgroundColor: Theme
+                  .of(context)
+                  .colorScheme
+                  .inverseSurface,
+              titleTextStyle: TextStyle(color: Theme
+                  .of(context)
+                  .colorScheme
+                  .primary),
               title: const Text("Enter Password"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text("Enter the password to access '$notebookName'."),
+                  Text("Enter the password to access '$notebookName'.",
+                    style: TextStyle(color: Theme
+                        .of(context)
+                        .colorScheme
+                        .surface),),
                   const SizedBox(height: 10),
                   MyTextField(
-                    controller: passwordController, 
-                    hintext: "Password", 
-                    obscuretext: true, 
-                    prefixicon: Icon(Icons.lock),
-                    width: 70, 
-                    height: 20, 
+                    controller: passwordController,
+                    hintext: "Password",
+                    obscuretext: true,
+                    prefixicon: const Icon(Icons.lock),
+                    width: 70,
+                    height: 20,
                     maxlines: 1,
                     errorText: isWrongPassword ? "Incorrect password" : null,
-                    )
-                  // TextField(
-                  //   controller: passwordController,
-                  //   obscureText: true, // Hide password input
-                  //   decoration: InputDecoration(
-                  //     labelText: "Password",
-                  //     errorText: isWrongPassword ? "Incorrect password" : null,
-                  //   ),
-                  // ),
+                  ),
                 ],
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(), // ❌ Cancel
+                  onPressed: () => Navigator.of(context).pop(),
                   child: const Text("Cancel"),
                 ),
                 TextButton(
@@ -162,29 +256,35 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                     String inputPassword = passwordController.text.trim();
 
                     if (_checkPassword(inputPassword, realPasswordHash)) {
-                      Navigator.of(context).pop(); // ✅ Close dialog
+                      Navigator.of(context).pop(); // Close the dialog.
                       showAnimatedSnackBar(
-                          context, "Correct Password", isSuccess: true,
-                          isTop: true);
-                      Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              NotebookDetailPage(notebookId: notebookID),
-                        ),
+                        "Correct Password",
+                        isSuccess: true,
+                        isTop: true,
                       );
+                      Navigator.of(context).push(createRoute(
+                        NotebookDetailPage(
+                          notebookId: notebookID,
+                          isPasswordProtected: isPasswordProtected,
+                        ),
+                      ));
                     } else {
-                      // ❌ Wrong password, show error
                       setState(() {
                         isWrongPassword = true;
                       });
                       showAnimatedSnackBar(
-                          context, "Wrong Password! Please Try Again.",
-                          isError: true, isTop: true);
+                        context,
+                        "Wrong Password! Please Try Again.",
+                        isError: true,
+                        isTop: true,
+                      );
                     }
                   },
                   child: const Text(
-                      "Proceed", style: TextStyle(color: Colors.green)),
+                    "Proceed",
+                    style: TextStyle(color: Colors.green),
+                  ),
                 ),
               ],
             );
@@ -193,6 +293,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
       },
     );
   }
+
 
   List<Notebook> _searchedNotebooks = [];
   bool _isSearching = false;
@@ -644,7 +745,7 @@ class _HomePageState extends State<HomePage> with SingleTickerProviderStateMixin
                           onTap: () async {
                             await _showPasswordInputDialog(
                               context,
-                              notebook.id,
+                              notebook.id!,
                               notebook.title,
                               notebook.password.toString(),
                               isProtected,
