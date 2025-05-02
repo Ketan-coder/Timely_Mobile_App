@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/components/button.dart';
 import 'package:timely/components/labels.dart';
 import 'package:timely/screens/sign_up_screen.dart';
+import 'package:timely/services/internet_checker_service.dart';
 import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
 import '../auth/user_details_service.dart';
@@ -28,11 +29,20 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   int? _loginAttempts = 0;
   DateTime? _firstFailedLoginTime;
+  late InternetChecker _internetChecker;
 
   @override
   void initState() {
     super.initState();
     _loadLoginAttemptData();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
+  }
+
+  @override
+  void dispose() {
+    _internetChecker.stopMonitoring();
+    super.dispose();
   }
 
   Future<void> _loadLoginAttemptData() async {

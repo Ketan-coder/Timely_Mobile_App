@@ -6,6 +6,7 @@ import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
+import 'package:timely/services/internet_checker_service.dart';
 import '../auth/auth_service.dart' as auth_service;
 import '../components/bottom_nav_bar.dart';
 import '../components/custom_page_animation.dart';
@@ -36,17 +37,30 @@ class _HomePageState extends State<HomePage>
   List<Notebook> _filteredNotebooks = [];
   late AnimationController _bookController;
   final BiometricAuth biometricAuth = BiometricAuth();
-
+  late InternetChecker _internetChecker;
 
   @override
   void initState() {
     super.initState();
-    _initializeData();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
+    if (_internetChecker.isConnected) {
+      _initializeData();
+    } else {
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+    }
+    // _initializeData();
     _bookController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
     )
       ..repeat();
+    
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -58,6 +72,7 @@ class _HomePageState extends State<HomePage>
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _internetChecker.stopMonitoring();
     _bookController.dispose();
     super.dispose();
   }
