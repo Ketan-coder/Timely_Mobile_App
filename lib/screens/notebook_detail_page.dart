@@ -1088,6 +1088,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
               .of(context)
               .colorScheme
               .primary,
+          margin: const EdgeInsets.only(top: 50),
         ),
       )
           : _errorMessage.isNotEmpty

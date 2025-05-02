@@ -141,7 +141,7 @@ class _HomePageState extends State<HomePage>
       bool isAuthenticated = false;
 
       // Allow up to 3 biometric attempts.
-      while (failedAttempts < 3 && !isAuthenticated) {
+      while (failedAttempts < 1 && !isAuthenticated) {
         try {
           isAuthenticated = await biometricAuth.biometricAuthenticate(
             reason: 'Authenticate to unlock "$notebookName"',
@@ -149,7 +149,7 @@ class _HomePageState extends State<HomePage>
 
           if (!isAuthenticated) {
             failedAttempts++;
-            if (failedAttempts < 3) {
+            if (failedAttempts < 1) {
               showAnimatedSnackBar(
                 context,
                 "Authentication failed. Attempt $failedAttempts/3",
