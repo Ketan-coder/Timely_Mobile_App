@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:timely/components/custom_snack_bar.dart';
 
 class InternetChecker {
@@ -16,7 +18,7 @@ class InternetChecker {
   void startMonitoring() {
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) async {
       print('Checking internet connection...');
-      bool currentlyConnected = await _hasInternetAccess();
+      bool currentlyConnected = await _isConnectedToInternet();
 
       if (!currentlyConnected && _isConnected) {
         _isConnected = false;
@@ -44,12 +46,24 @@ class InternetChecker {
     _timer.cancel();
   }
 
-  Future<bool> _hasInternetAccess() async {
-    try {
-      final result = await InternetAddress.lookup('timely.pythonanywhere.com');
-      return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
-    } on SocketException catch (_) {
-      return false;
+  Future<bool> _isConnectedToInternet() async {
+    if (kIsWeb) {
+      try {
+        final response = await http.get(
+            Uri.parse('https://www.timely.pythonanywhere.com'));
+        return response.statusCode == 200;
+      } catch (e) {
+        return false;
+      }
+    } else {
+      try {
+        final result = await InternetAddress.lookup(
+            'timely.pythonanywhere.com');
+        return result.isNotEmpty && result[0].rawAddress.isNotEmpty;
+      } on SocketException {
+        return false;
+      }
     }
   }
+
 }

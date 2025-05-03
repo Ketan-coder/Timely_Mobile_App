@@ -8,6 +8,8 @@ import 'package:timely/screens/login_screen.dart';
 import 'package:timely/services/internet_checker_service.dart';
 
 import '../auth/user_details_service.dart';
+import '../components/custom_drop_down.dart';
+import '../components/custom_switch_tile.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,7 +18,8 @@ class ProfilePage extends StatefulWidget {
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
   bool _isRefreshing = false;
   String? _token; // Store token
   bool isAuthenticated = false;
@@ -75,8 +78,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         // _isRefreshing = false;
       });
       final authService = auth_service.AuthService();
-      await authService.fetchUserPreferences(_token!);
-      final prefs2 = await auth_service.AuthService.loadUserPreferencesFromLocal(); // this has the final usable data
+      await authService.fetchUserPreferences(_token!, context);
+      final prefs2 = await auth_service.AuthService
+          .loadUserPreferencesFromLocal(); // this has the final usable data
 
       setState(() {
         _preferences = prefs2;
@@ -96,74 +100,35 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     }
   }
 
-  Future<void> _updatePreference(String key, dynamic value) async {
+  Future<void> _updatePreference(String key, dynamic value,
+      int userPerferenceId) async {
     final authService = auth_service.AuthService();
 
     setState(() {
       if (_preferences == null) return;
 
       switch (key) {
-        case 'notifications':
+        case 'notifications_enabled':
           _preferences = _preferences!.copyWith(notifications: value);
+          break;
+        case 'biometric_enabled':
+          _preferences = _preferences!.copyWith(biometric: value);
           break;
         case 'theme':
           _preferences = _preferences!.copyWith(theme: value);
           break;
-        case 'textSize':
+        case 'text_size':
           _preferences = _preferences!.copyWith(textSize: value);
           break;
       }
     });
 
     // Optional: Save to server
-    // await authService.updateUserPreferences(_token!, key, value);
+    await authService.updateUserPreferences(
+        _token!, key, value, userPerferenceId, context);
 
     print("Updated preference: $key = $value");
   }
-
-  Widget _buildSwitch(String title, String key) {
-    bool currentValue = false;
-    if (_preferences != null) {
-      switch (key) {
-        case 'notifications':
-          currentValue = _preferences!.notificationsEnabled;
-          break;
-      }
-    }
-
-    return SwitchListTile(
-      title: Text(title, style: TextStyle(fontFamily: 'Sora', color: Theme.of(context).colorScheme.surface)),
-      value: currentValue,
-      onChanged: (val) => _updatePreference(key, val),
-    );
-  }
-
-  Widget _buildDropdown<T>(String title, String key, List<DropdownMenuItem<T>> items) {
-    T? currentValue;
-
-    if (_preferences != null) {
-      switch (key) {
-        case 'theme':
-          currentValue = _preferences!.theme as T;
-          break;
-        case 'textSize':
-          currentValue = _preferences!.textSize as T;
-          break;
-      }
-    }
-
-    return ListTile(
-      title: Text(title, style: TextStyle(fontFamily: 'Sora', color: Theme.of(context).colorScheme.surface)),
-      trailing: DropdownButton<T>(
-        value: currentValue,
-        items: items,
-        onChanged: (val) {
-          if (val != null) _updatePreference(key, val);
-        },
-      ),
-    );
-  }
-
 
 
   @override
@@ -264,15 +229,48 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                         ),
                       ),
                       const Divider(),
-                      const Text("Preferences", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      _buildSwitch("Enable Notifications", "notifications_enabled"),
-                      _buildSwitch("Enable Reminders", "reminders_enabled"),
-                      _buildDropdown<String>("Theme", "theme", themeItems),
-                      _buildDropdown<int>("Text Size", "text_size", textSizeItems),
+                      const Text("Preferences", style: TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.bold)),
+                      CustomSwitchTile(
+                        title: "Enable Notifications",
+                        value: _preferences?.notificationsEnabled ?? false,
+                        onChanged: (val) => _updatePreference(
+                            'notifications_enabled', val, _preferences!.id),
+                      ),
+
+                      CustomSwitchTile(
+                        title: "Enable Biometric",
+                        value: _preferences?.biometricEnabled ?? false,
+                        onChanged: (value) => _updatePreference(
+                            'biometric_enabled', value, _preferences!.id),
+                      ),
+
+                      CustomDropdownTile<String>(
+                        title: "Theme",
+                        value: _preferences?.theme,
+                        items: themeItems,
+                        onChanged: (val) {
+                          if (val != null) _updatePreference(
+                              'theme', val, _preferences!.id);
+                        },
+                      ),
+
+                      CustomDropdownTile<int>(
+                        title: "Text Size",
+                        value: _preferences?.textSize,
+                        items: textSizeItems,
+                        onChanged: (val) {
+                          if (val != null) _updatePreference(
+                              'text_size', val, _preferences!.id);
+                        },
+                      ),
+
 
                       const SizedBox(height: 20),
-                    // Expanded(child:SizedBox(height: 100,)),
-                    MyButton(onPressed: () => _logout(context), text: 'Logout', isGhost: true)
+                      // Expanded(child:SizedBox(height: 100,)),
+                      MyButton(onPressed: () => _logout(context),
+                          text: 'Logout',
+                          isGhost: true)
                     ],
                   ),
                 ),

@@ -918,8 +918,9 @@ class AuthService {
     return users;
   }
 
-  Future<void> fetchUserPreferences(String token) async {
-    final url = Uri.parse('https://timely.pythonanywhere.com/api-auth/v1/userpreference/');
+  Future<void> fetchUserPreferences(String token, BuildContext context) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api-auth/v1/userpreference/');
 
     try {
       final response = await http.get(
@@ -945,6 +946,9 @@ class AuthService {
       }
     } on SocketException {
       print("No internet connection. Please check your network.");
+      showAnimatedSnackBar(
+          context, "No internet connection. Please check your network.",
+          isError: true, isTop: true);
     } catch (e) {
       print("Unexpected error while fetching preferences: $e");
     }
@@ -966,5 +970,43 @@ class AuthService {
       }
       return null;
     }
+
+  Future<void> updateUserPreferences(String token, String key, dynamic value,
+      int userPreferenceId, BuildContext context) async {
+    final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api-auth/v1/userpreference/$userPreferenceId/');
+    final localTime = DateTime.now().toLocal();
+    print(localTime);
+    try {
+      final response = await http.put(
+        url,
+        headers: {
+          'Authorization': 'Token $token',
+        },
+        body: {
+          key: value.toString(),
+          'updated_at': localTime.toIso8601String(),
+        },
+      );
+
+      if (response.statusCode == 200) {
+        showAnimatedSnackBar(
+            context, "Preferences updated successfully.", isSuccess: true,
+            isTop: true);
+      } else {
+        showAnimatedSnackBar(
+            context, "Failed to update preferences: ${response.body}",
+            isError: true, isTop: true);
+      }
+    } on SocketException {
+      showAnimatedSnackBar(
+          context, "No internet connection. Please check your network.",
+          isError: true, isTop: true);
+    } catch (e) {
+      showAnimatedSnackBar(
+          context, "Unexpected error while updating preferences: $e",
+          isError: true, isTop: true);
+    }
+  }
 
 }

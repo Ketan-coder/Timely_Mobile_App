@@ -81,6 +81,7 @@ class UserPreference {
 
     UserPreference copyWith({
     bool? notifications,
+    bool? biometric,
     String? theme,
     int? textSize,
   }) {
@@ -88,7 +89,7 @@ class UserPreference {
       id: id,
       theme: theme ?? this.theme,
       textSize: textSize ?? this.textSize,
-      biometricEnabled: biometricEnabled,
+      biometricEnabled: biometric ?? this.biometricEnabled,
       notificationsEnabled: notifications ?? this.notificationsEnabled,
       extraSettings: extraSettings,
       profile: profile,
