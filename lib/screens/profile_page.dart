@@ -3,6 +3,7 @@ import 'package:flutter_animated_icons/icons8.dart';
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
+import 'package:timely/models/user_preference.dart';
 import 'package:timely/screens/login_screen.dart';
 import 'package:timely/services/internet_checker_service.dart';
 
@@ -23,6 +24,22 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
   Map<String, dynamic> _userDetails = {};
   late AnimationController _bookController;
+
+  UserPreference? _preferences; 
+
+  List<DropdownMenuItem<String>> themeItems = const [
+    DropdownMenuItem(value: "off", child: Text("Off")),
+    DropdownMenuItem(value: "auto", child: Text("System")),
+    DropdownMenuItem(value: "light", child: Text("Light")),
+    DropdownMenuItem(value: "dark", child: Text("Dark")),
+  ];
+
+  List<DropdownMenuItem<int>> textSizeItems =  [
+    DropdownMenuItem(value: 0, child: Text("Small",style: TextStyle(color: Colors.deepPurple[100]),)),
+    DropdownMenuItem(value: 1, child: Text("Medium",style: TextStyle(color: Colors.deepPurple[100]),)),
+    DropdownMenuItem(value: 2, child: Text("Large",style: TextStyle(color: Colors.deepPurple[100]),)),
+    DropdownMenuItem(value: 3, child: Text("Extra Large",style: TextStyle(color: Colors.deepPurple[100]),)),
+  ];
 
   @override
   void dispose() {
@@ -45,16 +62,27 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   }
 
   Future<void> _loadUserDetails() async {
+    _token = await auth_service.AuthService.getToken();
     setState(() {
       _isRefreshing = true;
+      _token = _token;
     });
     isAuthenticated = await UserStorageHelper.isLoggedIn();
     if (isAuthenticated && mounted) {
       final details = await UserStorageHelper.getUserDetails();
       setState(() {
         _userDetails = details!;
+        // _isRefreshing = false;
+      });
+      final authService = auth_service.AuthService();
+      await authService.fetchUserPreferences(_token!);
+      final prefs2 = await auth_service.AuthService.loadUserPreferencesFromLocal(); // this has the final usable data
+
+      setState(() {
+        _preferences = prefs2;
         _isRefreshing = false;
       });
+
     }
   }
 
@@ -67,6 +95,76 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       );
     }
   }
+
+  Future<void> _updatePreference(String key, dynamic value) async {
+    final authService = auth_service.AuthService();
+
+    setState(() {
+      if (_preferences == null) return;
+
+      switch (key) {
+        case 'notifications':
+          _preferences = _preferences!.copyWith(notifications: value);
+          break;
+        case 'theme':
+          _preferences = _preferences!.copyWith(theme: value);
+          break;
+        case 'textSize':
+          _preferences = _preferences!.copyWith(textSize: value);
+          break;
+      }
+    });
+
+    // Optional: Save to server
+    // await authService.updateUserPreferences(_token!, key, value);
+
+    print("Updated preference: $key = $value");
+  }
+
+  Widget _buildSwitch(String title, String key) {
+    bool currentValue = false;
+    if (_preferences != null) {
+      switch (key) {
+        case 'notifications':
+          currentValue = _preferences!.notificationsEnabled;
+          break;
+      }
+    }
+
+    return SwitchListTile(
+      title: Text(title, style: TextStyle(fontFamily: 'Sora', color: Theme.of(context).colorScheme.surface)),
+      value: currentValue,
+      onChanged: (val) => _updatePreference(key, val),
+    );
+  }
+
+  Widget _buildDropdown<T>(String title, String key, List<DropdownMenuItem<T>> items) {
+    T? currentValue;
+
+    if (_preferences != null) {
+      switch (key) {
+        case 'theme':
+          currentValue = _preferences!.theme as T;
+          break;
+        case 'textSize':
+          currentValue = _preferences!.textSize as T;
+          break;
+      }
+    }
+
+    return ListTile(
+      title: Text(title, style: TextStyle(fontFamily: 'Sora', color: Theme.of(context).colorScheme.surface)),
+      trailing: DropdownButton<T>(
+        value: currentValue,
+        items: items,
+        onChanged: (val) {
+          if (val != null) _updatePreference(key, val);
+        },
+      ),
+    );
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +263,14 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                               .primary,
                         ),
                       ),
+                      const Divider(),
+                      const Text("Preferences", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      _buildSwitch("Enable Notifications", "notifications_enabled"),
+                      _buildSwitch("Enable Reminders", "reminders_enabled"),
+                      _buildDropdown<String>("Theme", "theme", themeItems),
+                      _buildDropdown<int>("Text Size", "text_size", textSizeItems),
+
+                      const SizedBox(height: 20),
                     // Expanded(child:SizedBox(height: 100,)),
                     MyButton(onPressed: () => _logout(context), text: 'Logout', isGhost: true)
                     ],

@@ -99,15 +99,17 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _loadNotebooks() async {
-    try {
-      List<Notebook> notebooks =
-      await auth_service.AuthService.loadNotebooksFromLocal();
-      
-      setState(() {
-        _notebooks = notebooks.map((notebook) => notebook.toJson()).toList();
-      });
-    } catch (e) {
-      showAnimatedSnackBar(context, 'Something Went Wrong: $e', isError: true);
+    if (mounted){
+      try {
+        List<Notebook> notebooks =
+        await auth_service.AuthService.loadNotebooksFromLocal();
+        
+        setState(() {
+          _notebooks = notebooks.map((notebook) => notebook.toJson()).toList();
+        });
+      } catch (e) {
+        showAnimatedSnackBar(context, 'Something Went Wrong: $e', isError: true);
+      }
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/models/shared_notebook.dart';
 import 'package:timely/models/todo.dart';
+import 'package:timely/models/user_preference.dart';
 import 'package:timely/services/internet_checker_service.dart';
 
 import '../models/notebook.dart';
@@ -916,4 +917,54 @@ class AuthService {
     print('Fetched ${users.length} users for notebook $notebookId!');
     return users;
   }
+
+  Future<void> fetchUserPreferences(String token) async {
+    final url = Uri.parse('https://timely.pythonanywhere.com/api-auth/v1/userpreference/');
+
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print("User preferences fetched successfully!");
+        print("User Preferences Data: ${jsonEncode(data)}");
+
+        final List<dynamic> results = data['results'];
+        if (results.isNotEmpty) {
+          final prefsModel = UserPreference.fromJson(results.first);
+          await saveUserPreferencesLocally(prefsModel.toJson());
+        }
+      } else {
+        print("Failed to fetch user preferences: ${response.body}");
+      }
+    } on SocketException {
+      print("No internet connection. Please check your network.");
+    } catch (e) {
+      print("Unexpected error while fetching preferences: $e");
+    }
+  }
+
+    static Future<void> saveUserPreferencesLocally(Map<String, dynamic> preferences) async {
+      final prefs = await SharedPreferences.getInstance();
+      String encodedData = jsonEncode(preferences);
+      await prefs.setString('user_preferences', encodedData);
+    }
+
+    static Future<UserPreference?> loadUserPreferencesFromLocal() async {
+      final prefs = await SharedPreferences.getInstance();
+      String? preferencesData = prefs.getString('user_preferences');
+
+      if (preferencesData != null) {
+        final Map<String, dynamic> decoded = jsonDecode(preferencesData);
+        return UserPreference.fromJson(decoded);
+      }
+      return null;
+    }
+
 }
