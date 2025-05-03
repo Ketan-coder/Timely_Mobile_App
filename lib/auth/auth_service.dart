@@ -53,6 +53,27 @@ class AuthService {
     return [];
   }
 
+  // Saving a single notebook (Map)
+  static Future<void> saveNotebookLocally(int notebookId, Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('notebook_$notebookId', jsonEncode(data));
+  }
+
+  // Loading the same single notebook
+  static Future<Map<String, dynamic>?> loadNotebookFromLocal(int notebookId) async {
+    final prefs = await SharedPreferences.getInstance();
+    String? data = prefs.getString('notebook_$notebookId');
+    if (data != null) {
+      final decoded = jsonDecode(data);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    }
+    return null;
+  }
+
+
+
   static Future<void> fetchNotebooks(String token, InternetChecker internetChecker, {int? pageNumber}) async {
     if (!internetChecker.isConnected) {
       print("No internet connection. Skipping API call.");

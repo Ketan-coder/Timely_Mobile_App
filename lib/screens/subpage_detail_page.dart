@@ -1,5 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter_animated_icons/icons8.dart';
+import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/components/custom_snack_bar.dart';
+import 'package:timely/services/internet_checker_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -20,16 +24,31 @@ class SubPageDetailsPage extends StatefulWidget {
   State<SubPageDetailsPage> createState() => _SubPageDetailsPageState();
 }
 
-class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
+class _SubPageDetailsPageState extends State<SubPageDetailsPage> with SingleTickerProviderStateMixin {
   Map<String, dynamic>? _subpageData;
   bool _isLoading = true;
   String _errorMessage = "";
   late String _token;
+  late InternetChecker _internetChecker;
+  late AnimationController _bodyController;
 
   @override
   void initState() {
     super.initState();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
     _loadTokenAndFetchSubpage();
+    _bodyController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _internetChecker.stopMonitoring();
+    _bodyController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTokenAndFetchSubpage() async {
@@ -48,31 +67,49 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
   }
 
     Future<void> _fetchSubPageDetails() async {
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/subpages/${widget.subpageUuid}/',
-    );
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $_token', // Replace with actual token
-      },
-    );
+      final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/subpages/${widget.subpageUuid}/',
+      );
 
-    if (response.statusCode == 200) {
-      setState(() {
-        _subpageData = jsonDecode(response.body);
-        //print(_subpageData);
-        _isLoading = false;
-      });
+      try {
+        final response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token $_token',
+          },
+        );
 
-    } else {
-      setState(() {
-        _errorMessage = "Failed to load subpage.";
-        _isLoading = false;
-      });
+        if (response.statusCode == 200) {
+          setState(() {
+            _subpageData = jsonDecode(response.body);
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _errorMessage = "Failed to load subpage.";
+            _isLoading = false;
+          });
+        }
+      } on SocketException catch (_) {
+        showAnimatedSnackBar(
+          context,
+          "No internet connection. Please try again.",
+          isError: true,
+          isTop: true,
+        );
+        setState(() {
+          _errorMessage = "No internet connection.";
+          _isLoading = false;
+        });
+      } catch (e) {
+        print("Unexpected error: $e");
+        setState(() {
+          _errorMessage = "Something went wrong.";
+          _isLoading = false;
+        });
+      }
     }
-  }
 
     Future<void> _showDeleteConfirmationDialog(
     String pageUuid,
@@ -224,7 +261,20 @@ class _SubPageDetailsPageState extends State<SubPageDetailsPage> {
       // ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(child: 
+                  CustomLoadingElement(
+                    bookController: _bodyController,
+                    icon: Icons8.book,
+                    iconColor: Theme
+                        .of(context)
+                        .colorScheme
+                        .surface,
+                    backgroundColor: Theme
+                        .of(context)
+                        .colorScheme
+                        .primary,
+                    margin: const EdgeInsets.only(top: 50),
+                  ))
               : _errorMessage.isNotEmpty
               ? Center(
                 child: Text(_errorMessage, style: TextStyle(color: Colors.red)),

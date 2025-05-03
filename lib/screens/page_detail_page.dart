@@ -1,6 +1,10 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter_animated_icons/icons8.dart';
+import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/screens/subpage_detail_page.dart';
+import 'package:timely/services/internet_checker_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
@@ -22,16 +26,37 @@ class PageDetailsPage extends StatefulWidget {
   State<PageDetailsPage> createState() => _PageDetailsPageState();
 }
 
-class _PageDetailsPageState extends State<PageDetailsPage> {
+class _PageDetailsPageState extends State<PageDetailsPage> with TickerProviderStateMixin {
   Map<String, dynamic>? _pageData;
   bool _isLoading = true;
   String _errorMessage = "";
   late String _token;
+  late InternetChecker _internetChecker;
+  late AnimationController _bodyController;
+  late AnimationController _pageController;
 
   @override
   void initState() {
     super.initState();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
     _loadTokenAndFetchNotebook();
+    _bodyController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _pageController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _internetChecker.stopMonitoring();
+    _bodyController.dispose();
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTokenAndFetchNotebook() async {
@@ -50,31 +75,63 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
   }
 
     Future<void> _fetchPageDetails() async {
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/pages/${widget.pageUuid}/',
-    );
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $_token', // Replace with actual token
-      },
-    );
+      if (!_internetChecker.isConnected) {
+        showAnimatedSnackBar(
+          context,
+          "You're offline. Please check your internet connection.",
+          isError: true,
+          isTop: true,
+        );
+        setState(() {
+          _errorMessage = "No internet connection.";
+          _isLoading = false;
+        });
+        return;
+      }
 
-    if (response.statusCode == 200) {
-      setState(() {
-        _pageData = jsonDecode(response.body);
-        //print(_pageData);
-        _isLoading = false;
-      });
+      final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/pages/${widget.pageUuid}/',
+      );
 
-    } else {
-      setState(() {
-        _errorMessage = "Failed to load notebook.";
-        _isLoading = false;
-      });
+      try {
+        final response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token $_token', // Replace with actual token
+          },
+        );
+
+        if (response.statusCode == 200) {
+          setState(() {
+            _pageData = jsonDecode(response.body);
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _errorMessage = "Failed to load page.";
+            _isLoading = false;
+          });
+        }
+      } on SocketException catch (_) {
+        showAnimatedSnackBar(
+          context,
+          "You're offline. Please check your internet connection.",
+          isError: true,
+          isTop: true,
+        );
+        setState(() {
+          _errorMessage = "No internet connection.";
+          _isLoading = false;
+        });
+      } catch (e) {
+        print("Unexpected error: $e");
+        setState(() {
+          _errorMessage = "Something went wrong.";
+          _isLoading = false;
+        });
+      }
     }
-  }
 
     Future<void> _showDeleteConfirmationDialog(
     String pageUuid,
@@ -146,68 +203,117 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
     }
 
     Future<List<Map<String, dynamic>>> _fetchPagesDetailsForSubpages({bool forceRefresh = false}) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // final String? cachedData = prefs.getString('notebook_${widget.notebookId}');
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-    // // Return cached data if available
-    // if (cachedData != null) {
-    //   return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
-    // }
-    if (!forceRefresh) {
-      final String? cachedData = prefs.getString('page_${widget.pageUuid}');
-      if (cachedData != null) {
-        return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
-      }
-    }
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/pages/${widget.pageUuid}/',
-    );
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $_token', // Replace with actual token
-      },
-    );
-
-    if (response.statusCode == 200) {
-      setState(() {
-        _pageData = jsonDecode(response.body);
-        //print(_pageData);
-        _isLoading = false;
-      });
-
-      final Map<String, dynamic> pageData = jsonDecode(response.body);
-      // final List<String> pageUuids = List<String>.from(notebookData['pages'] ?? []);
-      final List<String> subpageUuids = List<String>.from(pageData['subpages'] ?? []);
-
-      if (subpageUuids.isEmpty) {
-        return []; // No pages found
+      if (!forceRefresh) {
+        final String? cachedData = prefs.getString('page_${widget.pageUuid}');
+        if (cachedData != null) {
+          return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
+        }
       }
 
-      // Fetch pages in parallel instead of sequentially
-      final List<Map<String, dynamic>?> pages = await Future.wait(
-        subpageUuids.map((uuid) => auth_service.AuthService.fetchSubPageDetails(uuid, _token)),
+      if (!_internetChecker.isConnected) {
+        showAnimatedSnackBar(
+          context,
+          "You're offline. Loading cached pages if available...",
+          isError: true,
+          isTop: true,
+        );
+        final String? cachedData = prefs.getString('page_${widget.pageUuid}');
+        if (cachedData != null) {
+          return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
+        }
+        setState(() {
+          _errorMessage = "No internet connection.";
+          _isLoading = false;
+        });
+        return [];
+      }
+
+      final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/pages/${widget.pageUuid}/',
       );
 
-      // Remove null results (failed fetches)
-      final List<Map<String, dynamic>> validPages =
-          pages.where((page) => page != null).cast<Map<String, dynamic>>().toList();
+      try {
+        final response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token $_token',
+          },
+        );
 
-      // Cache the fetched pages
-      await auth_service.AuthService.savePagesLocally(pageData['id'], validPages);
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('page_${widget.pageUuid}', jsonEncode(validPages));
+        if (response.statusCode == 200) {
+          setState(() {
+            _pageData = jsonDecode(response.body);
+            _isLoading = false;
+          });
 
-      return validPages;
-    } else {
-      setState(() {
-        _errorMessage = "Failed to load notebook.";
-        _isLoading = false;
-      });
-      return [];
+          final Map<String, dynamic> pageData = jsonDecode(response.body);
+          final List<String> subpageUuids = List<String>.from(pageData['subpages'] ?? []);
+
+          if (subpageUuids.isEmpty) {
+            return []; // No pages
+          }
+
+          final List<Map<String, dynamic>?> pages = await Future.wait(
+            subpageUuids.map((uuid) =>
+                auth_service.AuthService.fetchSubPageDetails(uuid, _token)),
+          );
+
+          final List<Map<String, dynamic>> validPages =
+              pages.where((page) => page != null).cast<Map<String, dynamic>>().toList();
+
+          await auth_service.AuthService.savePagesLocally(pageData['id'], validPages);
+          await prefs.setString('page_${widget.pageUuid}', jsonEncode(validPages));
+
+          return validPages;
+        } else {
+          setState(() {
+            _errorMessage = "Failed to load notebook.";
+            _isLoading = false;
+          });
+          return [];
+        }
+
+      } on SocketException catch (_) {
+        showAnimatedSnackBar(
+          context,
+          "You're offline. Loading cached pages if available...",
+          isError: true,
+          isTop: true,
+        );
+
+        final String? cachedData = prefs.getString('page_${widget.pageUuid}');
+        if (cachedData != null) {
+          return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
+        }
+        if (mounted) {
+          setState(() {
+            _errorMessage = "No internet connection.";
+            _isLoading = false;
+          });
+        }
+        return [];
+
+      } catch (e) {
+        print("Unexpected error: $e");
+        if (mounted) {
+        showAnimatedSnackBar(
+          context,
+          "An unexpected error occurred. Please try again.",
+          isError: true,
+          isTop: true,
+        );
+        setState(() {
+          _errorMessage = "Something went wrong.";
+          _isLoading = false;
+        });
+        }
+        return [];
+      }
     }
-  }
+
 
   Future<void> showPageBottomSheet(BuildContext context) async {
   showModalBottomSheet(
@@ -266,13 +372,27 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
                       future: _pageFuture,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                          return Center(
+                          child: CustomLoadingElement(
+                            bookController: _pageController,
+                            icon: Icons8.document,
+                            iconColor: Theme
+                                .of(context)
+                                .colorScheme
+                                .surface,
+                            backgroundColor: Theme
+                                .of(context)
+                                .colorScheme
+                                .primary,
+                            margin: const EdgeInsets.only(top: 50),
+                          ),
+                        );
                         } else if (snapshot.hasError) {
                           return Center(child: Text("Error: ${snapshot.error}"));
                         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                           return Center(
                             child: Text(
-                              "No Pages Found!",
+                              "No SubPages Found!",
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.error,
                                 fontSize: 20,
@@ -413,7 +533,21 @@ class _PageDetailsPageState extends State<PageDetailsPage> {
       ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                  child: CustomLoadingElement(
+                    bookController: _bodyController,
+                    icon: Icons8.book,
+                    iconColor: Theme
+                        .of(context)
+                        .colorScheme
+                        .surface,
+                    backgroundColor: Theme
+                        .of(context)
+                        .colorScheme
+                        .primary,
+                    margin: const EdgeInsets.only(top: 50),
+                  ),
+                )
               : _errorMessage.isNotEmpty
               ? Center(
                 child: Text(_errorMessage, style: TextStyle(color: Colors.red)),

@@ -57,6 +57,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   bool canEditNotebook = false;
   List<ProfileModel?> sharedUsers = [];
   late InternetChecker _internetChecker;
+  bool _isConnectedToInternet = true;
 
   @override
   void initState() {
@@ -197,14 +198,41 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   }
 
   Future<void> _fetchNotebookDetails() async {
-    if (!_internetChecker.isConnected) {
-      print("No internet connection. Skipping API call.");
-      showAnimatedSnackBar(
-        context,
-        "You're offline. Please check your internet connection.",
-        isError: true,
-        isTop: true,
-      );
+    // if (!_internetChecker.isConnected) {
+    //   print("No internet connection. Skipping API call.");
+    //   showAnimatedSnackBar(
+    //     context,
+    //     "You're offline. Please check your internet connection.",
+    //     isError: true,
+    //     isTop: true,
+    //   );
+    //   return;
+    // }
+
+      if (!_internetChecker.isConnected) {
+      print("No internet connection. Trying to load from device...");
+
+      final localData = await auth_service.AuthService.loadNotebookFromLocal(widget.notebookId);
+      if (localData != null) {
+        setState(() {
+          _notebookData = localData;
+          _dataReady = true;
+          _isLoading = false;
+        });
+        showAnimatedSnackBar(
+          context,
+          "Loaded from device storage.",
+          isSuccess: true,
+          isTop: true,
+        );
+      } else {
+        showAnimatedSnackBar(
+          context,
+          "You're offline and no local data found.",
+          isError: true,
+          isTop: true,
+        );
+      }
       return;
     }
 
@@ -330,11 +358,35 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
         isError: true,
         isTop: true,
       );
-      setState(() {
-        _errorMessage = "Connection error. Try again later.";
-        _isLoading = false;
-        _dataReady = true;
-      });
+      final localData = await auth_service.AuthService.loadNotebookFromLocal(widget.notebookId);
+      if (localData != null) {
+        setState(() {
+          _isConnectedToInternet = false;
+          _notebookData = localData;
+          _dataReady = true;
+          _isLoading = false;
+        });
+        showAnimatedSnackBar(
+          context,
+          "Loaded from device storage.",
+          isSuccess: true,
+          isTop: true,
+        );
+      } else {
+        showAnimatedSnackBar(
+          context,
+          "You're offline and no local data found.",
+          isError: true,
+          isTop: true,
+        );
+      }
+      return;
+      // setState(() {
+      //   _isConnectedToInternet = false;
+      //   _errorMessage = "Connection error. Try again later.";
+      //   _isLoading = false;
+      //   _dataReady = true;
+      // });
     } catch (e) {
       print("Unexpected error: $e");
       setState(() {
@@ -387,11 +439,13 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
     );
 
     if (response.statusCode == 200) {
-      setState(() {
-        _notebookData = jsonDecode(response.body);
-        //print(_notebookData);
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _notebookData = jsonDecode(response.body);
+          //print(_notebookData);
+          _isLoading = false;
+        });
+      }
 
       final Map<String, dynamic> notebookData = jsonDecode(response.body);
       final List<String> pageUuids = List<String>.from(
