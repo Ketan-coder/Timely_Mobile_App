@@ -72,6 +72,8 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  
+
 
   Future<void> _login() async {
     _checkLoginReset(); // Check if we need to reset login attempts
@@ -81,6 +83,12 @@ class _LoginPageState extends State<LoginPage> {
           isError: true, isTop: true);
       return;
     }
+
+    if(!_internetChecker.isConnected) {
+      showAnimatedSnackBar(context, "You're offline. Please check your internet connection.", isError: true, isTop: true);
+      return;
+    }
+
     if (_usernameController.text
         .trim()
         .isEmpty) {

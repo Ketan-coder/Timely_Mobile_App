@@ -1,8 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/models/shared_notebook.dart';
 import 'package:timely/models/todo.dart';
+import 'package:timely/services/internet_checker_service.dart';
 
 import '../models/notebook.dart';
 import 'package:http/http.dart' as http;
@@ -49,33 +53,40 @@ class AuthService {
     return [];
   }
 
-  static Future<void> fetchNotebooks(String token, {int? pageNumber}) async {
-    //final url = Uri.parse('https://timely.pythonanywhere.com/api/v1/notebooks/');
+  static Future<void> fetchNotebooks(String token, InternetChecker internetChecker, {int? pageNumber}) async {
+    if (!internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        internetChecker.context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return;
+    }
+
     final Uri url;
     if (pageNumber == null || pageNumber == 1) {
-      url = Uri.parse(
-          'https://timely.pythonanywhere.com/api/v1/notebooks/');
+      url = Uri.parse('https://timely.pythonanywhere.com/api/v1/notebooks/');
     } else {
-      url = Uri.parse(
-          'https://timely.pythonanywhere.com/api/v1/notebooks/?page=$pageNumber');
+      url = Uri.parse('https://timely.pythonanywhere.com/api/v1/notebooks/?page=$pageNumber');
     }
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $token',
-      },
-    );
 
-    print("Raw API Response: ${response.body}"); // Debugging
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $token',
+        },
+      );
 
-    if (response.statusCode == 200) {
-      try {
+      print("Raw API Response: ${response.body}");
+
+      if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
 
-        // Validate 'results' key exists and is a list
-        if (!jsonResponse.containsKey('results') ||
-            jsonResponse['results'] is! List) {
+        if (!jsonResponse.containsKey('results') || jsonResponse['results'] is! List) {
           print("Error: 'results' key missing or not a List in response");
           return;
         }
@@ -85,21 +96,22 @@ class AuthService {
         print("Notebooks fetched successfully!");
         print("Notebook Data: ${jsonEncode(data)}");
 
-        // Ensure items in 'data' are maps before conversion
         List<Notebook> notebooks = data
             .where((item) => item is Map<String, dynamic>)
             .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
             .toList();
 
-        // Store notebooks locally
         await saveNotebooksLocally(notebooks);
-      } catch (e) {
-        print("Error parsing response: $e");
+      } else {
+        print("Failed to fetch notebooks: ${response.body}");
       }
-    } else {
-      print("Failed to fetch notebooks: ${response.body}");
+    } on SocketException catch (e) {
+      print("No internet or DNS issue: $e");
+    } catch (e) {
+      print("Unexpected error during API call: $e");
     }
   }
+
 
   static Future<List<SharedNotebook>> fetchSharedNotebooksByNotebookId(
       String token, int notebookId) async {
@@ -154,51 +166,77 @@ class AuthService {
   }
 
 
-  static Future<void> fetchSharedNotebooks(String token) async {
-    final url = Uri.parse(
-        'https://timely.pythonanywhere.com/api/v1/notebooks/').replace(
-        queryParameters: {'shared_with_me': 'True'});
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $token',
-      },
-    );
-
-    print("Raw API Response: ${response.body}"); // Debugging
-
-    if (response.statusCode == 200) {
-      try {
-        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-
-        // Validate 'results' key exists and is a list
-        if (!jsonResponse.containsKey('results') ||
-            jsonResponse['results'] is! List) {
-          print("Error: 'results' key missing or not a List in response");
-          return;
-        }
-
-        final List<dynamic> data = jsonResponse['results'];
-
-        print("Notebooks fetched successfully!");
-        print("Notebook Data: ${jsonEncode(data)}");
-
-        // Ensure items in 'data' are maps before conversion
-        List<Notebook> notebooks = data
-            .where((item) => item is Map<String, dynamic>)
-            .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
-            .toList();
-
-        // Store notebooks locally
-        await saveSharedNotebooksLocally(notebooks);
-      } catch (e) {
-        print("Error parsing response: $e");
+  static Future<void> fetchSharedNotebooks(String token, InternetChecker _internetChecker) async {
+      if (!_internetChecker.isConnected) {
+        print("No internet connection. Skipping API call.");
+        showAnimatedSnackBar(
+          _internetChecker.context,
+          "You're offline. Please check your internet connection.",
+          isError: true,
+          isTop: true,
+        );
+        return;
       }
-    } else {
-      print("Failed to fetch notebooks: ${response.body}");
+
+      final Uri url = Uri.parse('https://timely.pythonanywhere.com/api/v1/notebooks/')
+          .replace(queryParameters: {'shared_with_me': 'True'});
+
+      try {
+        final response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token $token',
+          },
+        );
+
+        print("Raw API Response: ${response.body}");
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+          if (!jsonResponse.containsKey('results') || jsonResponse['results'] is! List) {
+            print("Error: 'results' key missing or not a List in response");
+            return;
+          }
+
+          final List<dynamic> data = jsonResponse['results'];
+          print("Shared notebooks fetched successfully!");
+          print("Notebook Data: ${jsonEncode(data)}");
+
+          List<Notebook> notebooks = data
+              .where((item) => item is Map<String, dynamic>)
+              .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
+              .toList();
+
+          await saveSharedNotebooksLocally(notebooks);
+        } else {
+          print("Failed to fetch shared notebooks: ${response.statusCode} - ${response.body}");
+          showAnimatedSnackBar(
+            _internetChecker.context,
+            "Failed to fetch shared notebooks: ${response.statusCode}",
+            isError: true,
+            isTop: true,
+          );
+        }
+      } on SocketException catch (e) {
+        print("Network error: $e");
+        showAnimatedSnackBar(
+          _internetChecker.context,
+          "Cannot reach server. Please check your internet.",
+          isError: true,
+          isTop: true,
+        );
+      } catch (e) {
+        print("Unexpected error: $e");
+        showAnimatedSnackBar(
+          _internetChecker.context,
+          "Something went wrong while fetching shared notebooks.",
+          isError: true,
+          isTop: true,
+        );
+      }
     }
-  }
 
   static Future<void> saveSharedNotebooksLocally(
       List<Notebook> notebooks) async {
@@ -217,49 +255,75 @@ class AuthService {
     return [];
   }
 
-  static Future<void> fetchPublicNotebooks(String token) async {
-    final url = Uri.parse(
-        'https://timely.pythonanywhere.com/api/v1/notebooks/').replace(
-        queryParameters: {'is_public': 'True'});
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $token',
-      },
-    );
+  static Future<void> fetchPublicNotebooks(String token, InternetChecker _internetChecker) async {
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        _internetChecker.context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return;
+    }
 
-    print("Raw API Response: ${response.body}"); // Debugging
+    final Uri url = Uri.parse('https://timely.pythonanywhere.com/api/v1/notebooks/')
+        .replace(queryParameters: {'is_public': 'True'});
 
-    if (response.statusCode == 200) {
-      try {
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $token',
+        },
+      );
+
+      print("Raw API Response: ${response.body}");
+
+      if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
 
-        // Validate 'results' key exists and is a list
-        if (!jsonResponse.containsKey('results') ||
-            jsonResponse['results'] is! List) {
+        if (!jsonResponse.containsKey('results') || jsonResponse['results'] is! List) {
           print("Error: 'results' key missing or not a List in response");
           return;
         }
 
         final List<dynamic> data = jsonResponse['results'];
-
-        print("Public Notebooks fetched successfully!");
+        print("Public notebooks fetched successfully!");
         print("Public Notebook Data: ${jsonEncode(data)}");
 
-        // Ensure items in 'data' are maps before conversion
         List<Notebook> notebooks = data
             .where((item) => item is Map<String, dynamic>)
             .map((item) => Notebook.fromJson(item as Map<String, dynamic>))
             .toList();
 
-        // Store notebooks locally
         await savePublicNotebooksLocally(notebooks);
-      } catch (e) {
-        print("Error parsing response: $e");
+      } else {
+        print("Failed to fetch public notebooks: ${response.statusCode} - ${response.body}");
+        showAnimatedSnackBar(
+          _internetChecker.context,
+          "Failed to fetch public notebooks: ${response.statusCode}",
+          isError: true,
+          isTop: true,
+        );
       }
-    } else {
-      print("Failed to fetch notebooks: ${response.body}");
+    } on SocketException catch (e) {
+      print("Network error: $e");
+      showAnimatedSnackBar(
+        _internetChecker.context,
+        "Cannot reach server. Please check your internet.",
+        isError: true,
+        isTop: true,
+      );
+    } catch (e) {
+      print("Unexpected error: $e");
+      showAnimatedSnackBar(
+        _internetChecker.context,
+        "Something went wrong while fetching public notebooks.",
+        isError: true,
+        isTop: true,
+      );
     }
   }
 
@@ -426,48 +490,74 @@ class AuthService {
     return [];
   }
 
-  static Future<void> fetchTodos(String token) async {
-    final url = Uri.parse(
-        'https://timely.pythonanywhere.com/api/v1/todos/');
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $token',
-      },
-    );
+  static Future<void> fetchTodos(String token, InternetChecker _internetChecker) async {
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        _internetChecker.context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return;
+    }
 
-    print("Raw API Response: ${response.body}"); // Debugging
+    final url = Uri.parse('https://timely.pythonanywhere.com/api/v1/todos/');
 
-    if (response.statusCode == 200) {
-      try {
+    try {
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $token',
+        },
+      );
+
+      print("Raw API Response: ${response.body}");
+
+      if (response.statusCode == 200) {
         final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
 
-        // Validate 'results' key exists and is a list
-        if (!jsonResponse.containsKey('results') ||
-            jsonResponse['results'] is! List) {
+        if (!jsonResponse.containsKey('results') || jsonResponse['results'] is! List) {
           print("Error: 'results' key missing or not a List in response");
           return;
         }
 
         final List<dynamic> data = jsonResponse['results'];
-
         print("Todos fetched successfully!");
         print("Todos Data: ${jsonEncode(data)}");
 
-        // Ensure items in 'data' are maps before conversion
         List<Todo> todos = data
             .where((item) => item is Map<String, dynamic>)
             .map((item) => Todo.fromJson(item as Map<String, dynamic>))
             .toList();
 
-        // Store notebooks locally
         await saveTodoLocally(todos);
-      } catch (e) {
-        print("Error parsing response: $e");
+      } else {
+        print("Failed to fetch todos: ${response.statusCode} - ${response.body}");
+        showAnimatedSnackBar(
+          _internetChecker.context,
+          "Failed to fetch todos: ${response.statusCode}",
+          isError: true,
+          isTop: true,
+        );
       }
-    } else {
-      print("Failed to fetch todos: ${response.body}");
+    } on SocketException catch (e) {
+      print("Network error: $e");
+      showAnimatedSnackBar(
+        _internetChecker.context,
+        "Cannot reach server. Please check your internet.",
+        isError: true,
+        isTop: true,
+      );
+    } catch (e) {
+      print("Unexpected error: $e");
+      showAnimatedSnackBar(
+        _internetChecker.context,
+        "Something went wrong while fetching your todos.",
+        isError: true,
+        isTop: true,
+      );
     }
   }
 
@@ -487,57 +577,80 @@ class AuthService {
     return [];
   }
 
-  static Future<void> fetchReminders(String token, {int? pageNumber}) async {
-    final Uri url;
-    if (pageNumber == null || pageNumber == 1) {
-      url = Uri.parse(
-          'https://timely.pythonanywhere.com/api/v1/remainders/');
-    } else {
-      url = Uri.parse(
-          'https://timely.pythonanywhere.com/api/v1/remainders/?page=$pageNumber');
-    }
-
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $token',
-      },
-    );
-
-    print("Raw API Response: ${response.body}"); // Debugging
-
-    if (response.statusCode == 200) {
-      try {
-        final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
-
-        // Validate 'results' key exists and is a list
-        if (!jsonResponse.containsKey('results') ||
-            jsonResponse['results'] is! List) {
-          print("Error: 'results' key missing or not a List in response");
-          return;
-        }
-
-        final List<dynamic> data = jsonResponse['results'];
-
-        print("Reminders fetched successfully!");
-        print("Reminders Data: ${jsonEncode(data)}");
-
-        // Ensure items in 'data' are maps before conversion
-        List<Reminder> reminders = data
-            .where((item) => item is Map<String, dynamic>)
-            .map((item) => Reminder.fromJson(item as Map<String, dynamic>))
-            .toList();
-
-        // Store notebooks locally
-        await saveRemindersLocally(reminders);
-      } catch (e) {
-        print("Error parsing response: $e");
+  static Future<void> fetchReminders(String token, InternetChecker _internetChecker, {int? pageNumber}) async {
+      if (!_internetChecker.isConnected) {
+        print("No internet connection. Skipping API call.");
+        showAnimatedSnackBar(
+          _internetChecker.context,
+          "You're offline. Please check your internet connection.",
+          isError: true,
+          isTop: true,
+        );
+        return;
       }
-    } else {
-      print("Failed to fetch Reminders: ${response.body}");
+
+      final Uri url = Uri.parse(
+        pageNumber == null || pageNumber == 1
+            ? 'https://timely.pythonanywhere.com/api/v1/remainders/'
+            : 'https://timely.pythonanywhere.com/api/v1/remainders/?page=$pageNumber',
+      );
+
+      try {
+        final response = await http.get(
+          url,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token $token',
+          },
+        );
+
+        print("Raw API Response: ${response.body}");
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> jsonResponse = jsonDecode(response.body);
+
+          if (!jsonResponse.containsKey('results') || jsonResponse['results'] is! List) {
+            print("Error: 'results' key missing or not a List in response");
+            return;
+          }
+
+          final List<dynamic> data = jsonResponse['results'];
+          print("Reminders fetched successfully!");
+          print("Reminders Data: ${jsonEncode(data)}");
+
+          List<Reminder> reminders = data
+              .where((item) => item is Map<String, dynamic>)
+              .map((item) => Reminder.fromJson(item as Map<String, dynamic>))
+              .toList();
+
+          await saveRemindersLocally(reminders);
+        } else {
+          print("Failed to fetch Reminders: ${response.statusCode} - ${response.body}");
+          showAnimatedSnackBar(
+            _internetChecker.context,
+            "Failed to fetch reminders: ${response.statusCode}",
+            isError: true,
+            isTop: true,
+          );
+        }
+      } on SocketException catch (e) {
+        print("Network error: $e");
+        showAnimatedSnackBar(
+          _internetChecker.context,
+          "Cannot reach server. Please check your internet.",
+          isError: true,
+          isTop: true,
+        );
+      } catch (e) {
+        print("Unexpected error: $e");
+        showAnimatedSnackBar(
+          _internetChecker.context,
+          "Something went wrong while fetching your reminders.",
+          isError: true,
+          isTop: true,
+        );
+      }
     }
-  }
 
   static Future<void> saveRemindersLocally(List<Reminder> reminders) async {
     final prefs = await SharedPreferences.getInstance();

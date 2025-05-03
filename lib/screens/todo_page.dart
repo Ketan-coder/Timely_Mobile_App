@@ -6,6 +6,7 @@ import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/models/todo.dart';
 import 'package:timely/screens/login_screen.dart';
+import 'package:timely/services/internet_checker_service.dart';
 
 import '../components/custom_snack_bar.dart';
 import '../utils/date_formatter.dart';
@@ -24,10 +25,13 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
   String? _token;
   late AnimationController _todoController;
   bool _isCompletedExpanded = false;
+  late InternetChecker _internetChecker;
 
   @override
   void initState() {
     super.initState();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
     _initializeData();
     _todoController = AnimationController(
       vsync: this,
@@ -45,6 +49,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _internetChecker.stopMonitoring();
     _todoController.dispose();
     super.dispose();
   }
@@ -53,7 +58,7 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
       setState(() => _isRefreshing = true);
-      await auth_service.AuthService.fetchTodos(_token!);
+      await auth_service.AuthService.fetchTodos(_token!,_internetChecker);
       await _loadTodos();
       setState(() => _isRefreshing = false);
     } else {

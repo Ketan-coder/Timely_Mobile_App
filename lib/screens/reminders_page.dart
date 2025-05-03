@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/notification_test_screen.dart';
 import 'package:timely/services/alarm_service.dart';
+import 'package:timely/services/internet_checker_service.dart';
 
 import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
@@ -28,6 +29,7 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
   bool _isRefreshing = false;
   String? _token; // Store token
   late AnimationController _bellController;
+  late InternetChecker _internetChecker;
 
   String formatReminderBody(String task) {
     final shortTemplates = [
@@ -57,6 +59,8 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
     _initializeData();
     _bellController = AnimationController(
       vsync: this,
@@ -73,6 +77,7 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _internetChecker.stopMonitoring();
     _bellController.dispose();
     super.dispose();
   }
@@ -81,7 +86,7 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
       setState(() => _isRefreshing = true);
-      await auth_service.AuthService.fetchReminders(_token!);
+      await auth_service.AuthService.fetchReminders(_token!,_internetChecker);
       await _loadReminders();
       setState(() => _isRefreshing = false);
     } else {

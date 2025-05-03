@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/components/custom_snack_bar.dart';
+import 'package:timely/services/internet_checker_service.dart';
 import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
 import '../components/text_field.dart';
@@ -21,6 +22,7 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   bool _isRefreshing = false;
+  late InternetChecker _internetChecker;
 
   List<Map<String, dynamic>> _sharedNotebooks = [];
   List<Map<String, dynamic>> _publicNotebooks = [];
@@ -32,6 +34,8 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
     _initializeData();
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
@@ -44,6 +48,7 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _internetChecker.stopMonitoring();
     _tabController.dispose();
     super.dispose();
   }
@@ -52,8 +57,8 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
       setState(() => _isRefreshing = true);
-      await auth_service.AuthService.fetchSharedNotebooks(_token!);
-      await auth_service.AuthService.fetchPublicNotebooks(_token!);
+      await auth_service.AuthService.fetchSharedNotebooks(_token!,_internetChecker);
+      await auth_service.AuthService.fetchPublicNotebooks(_token!, _internetChecker);
       await _loadSharedNotebooks();
       setState(() => _isRefreshing = false);
     } else {

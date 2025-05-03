@@ -4,6 +4,7 @@ import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/login_screen.dart';
+import 'package:timely/services/internet_checker_service.dart';
 
 import '../auth/user_details_service.dart';
 
@@ -18,6 +19,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   bool _isRefreshing = false;
   String? _token; // Store token
   bool isAuthenticated = false;
+  late InternetChecker _internetChecker;
 
   Map<String, dynamic> _userDetails = {};
   late AnimationController _bookController;
@@ -25,6 +27,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _internetChecker.stopMonitoring();
     _bookController.dispose();
     super.dispose();
   }
@@ -32,6 +35,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   @override
   void initState() {
     super.initState();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
     _loadUserDetails();
     _bookController = AnimationController(
       vsync: this,

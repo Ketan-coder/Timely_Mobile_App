@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +11,7 @@ import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/page_detail_page.dart';
 import 'package:timely/screens/subpage_detail_page.dart';
+import 'package:timely/services/internet_checker_service.dart';
 import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
 import 'package:flutter_html/flutter_html.dart';
@@ -53,10 +56,13 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   late AnimationController _actionsController;
   bool canEditNotebook = false;
   List<ProfileModel?> sharedUsers = [];
+  late InternetChecker _internetChecker;
 
   @override
   void initState() {
     super.initState();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
     _loadTokenAndFetchNotebook();
     _bodyController = AnimationController(
       vsync: this,
@@ -73,6 +79,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _internetChecker.stopMonitoring();
     _bodyController.dispose();
     _actionsController.dispose();
     super.dispose();
@@ -94,6 +101,17 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   }
 
   Future<void> _toggleIsFavourite(int notebookID, bool IsFavourite) async {
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return;
+    }
+
     final url = Uri.parse(
       'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
     );
@@ -133,6 +151,17 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   }
 
   Future<void> _deleteNotebook(int notebookID, String NotebookName) async {
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return;
+    }
+
     final url = Uri.parse(
       'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
     );
@@ -168,117 +197,154 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
   }
 
   Future<void> _fetchNotebookDetails() async {
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
-    );
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $_token', // Replace with actual token
-      },
-    );
-
-    if (response.statusCode == 200) {
-      setState(() {
-        _notebookData = jsonDecode(response.body);
-        //print(_notebookData);
-      });
-      final userDetails = await UserStorageHelper.getUserDetails();
-      List<SharedNotebook> sharedNotebookDetails = await auth_service
-          .AuthService.fetchSharedNotebooksByNotebookId(
-        _token,
-        widget.notebookId,
-      );
-      List<ProfileModel> allSharedUsers = []; // Collect all users first
-
-      if (sharedNotebookDetails.isNotEmpty) {
-        canEditNotebook =
-            sharedNotebookDetails.any((notebook) => notebook.canEdit);
-
-        for (var sharedNotebook in sharedNotebookDetails) {
-          if (sharedNotebook.sharedTo != null &&
-              sharedNotebook.sharedTo.isNotEmpty) {
-            for (var sharedUserProfileId in sharedNotebook.sharedTo) {
-              ProfileModel? user = await auth_service.AuthService
-                  .fetchUserByProfileId(_token, sharedUserProfileId);
-              if (user != null) {
-                allSharedUsers.add(user);
-              }
-            }
-          }
-        }
-
-        // Now save all users at once
-        if (allSharedUsers.isNotEmpty) {
-          await auth_service.AuthService.saveUserLocally(
-              widget.notebookId, allSharedUsers);
-          sharedUsers =
-          await auth_service.AuthService.getUserLocally(widget.notebookId);
-        }
-      } else {
-        canEditNotebook = false;
-      }
-
-      if (canEditNotebook) {
-        if (mounted) {
-          setState(() {
-            widget.canEdit = true;
-            widget.canDelete = true;
-            widget.canFavourite = true;
-            widget.canExportToPDF = true;
-            widget.canExportToJSON = true;
-            _dataReady = true;
-            _isLoading = false;
-          });
-        }
-      } else if (userDetails != null &&
-          (userDetails['user_id'] == _notebookData!['author']) &&
-          widget.canEdit != true) {
-        if (mounted) {
-          setState(() {
-            widget.canEdit = true;
-            widget.canDelete = true;
-            widget.canFavourite = true;
-            widget.canExportToPDF = true;
-            widget.canExportToJSON = true;
-            _dataReady = true;
-            _isLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            widget.canEdit = false;
-            widget.canDelete = false;
-            widget.canFavourite = false;
-            widget.canExportToPDF = false;
-            widget.canExportToJSON = false;
-            _dataReady = true;
-            _isLoading = false;
-          });
-        }
-      }
-    } else if (response.statusCode == 404) {
-      setState(() {
-        _errorMessage = "404 - No Notebook Found!";
-        _isLoading = false;
-        _dataReady = true;
-      });
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
       showAnimatedSnackBar(
         context,
-        "404 - No Notebook Found!",
+        "You're offline. Please check your internet connection.",
         isError: true,
         isTop: true,
       );
-    } else {
+      return;
+    }
+
+    try {
+      final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $_token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _notebookData = jsonDecode(response.body);
+        });
+
+        final userDetails = await UserStorageHelper.getUserDetails();
+
+        List<SharedNotebook> sharedNotebookDetails =
+            await auth_service.AuthService.fetchSharedNotebooksByNotebookId(
+          _token,
+          widget.notebookId,
+        );
+
+        List<ProfileModel> allSharedUsers = [];
+
+        if (sharedNotebookDetails.isNotEmpty) {
+          canEditNotebook =
+              sharedNotebookDetails.any((notebook) => notebook.canEdit);
+
+          for (var sharedNotebook in sharedNotebookDetails) {
+            if (sharedNotebook.sharedTo != null &&
+                sharedNotebook.sharedTo.isNotEmpty) {
+              for (var sharedUserProfileId in sharedNotebook.sharedTo) {
+                ProfileModel? user = await auth_service.AuthService
+                    .fetchUserByProfileId(_token, sharedUserProfileId);
+                if (user != null) {
+                  allSharedUsers.add(user);
+                }
+              }
+            }
+          }
+
+          if (allSharedUsers.isNotEmpty) {
+            await auth_service.AuthService.saveUserLocally(
+                widget.notebookId, allSharedUsers);
+            sharedUsers =
+                await auth_service.AuthService.getUserLocally(widget.notebookId);
+          }
+        } else {
+          canEditNotebook = false;
+        }
+
+        // Permission logic
+        if (canEditNotebook) {
+          if (mounted) {
+            setState(() {
+              widget.canEdit = true;
+              widget.canDelete = true;
+              widget.canFavourite = true;
+              widget.canExportToPDF = true;
+              widget.canExportToJSON = true;
+              _dataReady = true;
+              _isLoading = false;
+            });
+          }
+        } else if (userDetails != null &&
+            (userDetails['user_id'] == _notebookData!['author']) &&
+            widget.canEdit != true) {
+          if (mounted) {
+            setState(() {
+              widget.canEdit = true;
+              widget.canDelete = true;
+              widget.canFavourite = true;
+              widget.canExportToPDF = true;
+              widget.canExportToJSON = true;
+              _dataReady = true;
+              _isLoading = false;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              widget.canEdit = false;
+              widget.canDelete = false;
+              widget.canFavourite = false;
+              widget.canExportToPDF = false;
+              widget.canExportToJSON = false;
+              _dataReady = true;
+              _isLoading = false;
+            });
+          }
+        }
+      } else if (response.statusCode == 404) {
+        setState(() {
+          _errorMessage = "404 - No Notebook Found!";
+          _isLoading = false;
+          _dataReady = true;
+        });
+        showAnimatedSnackBar(
+          context,
+          "404 - No Notebook Found!",
+          isError: true,
+          isTop: true,
+        );
+      } else {
+        setState(() {
+          _errorMessage = "Failed to load notebook.";
+          _isLoading = false;
+          _dataReady = true;
+        });
+      }
+    } on SocketException catch (e) {
+      print("SocketException: $e");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
       setState(() {
-        _errorMessage = "Failed to load notebook.";
+        _errorMessage = "Connection error. Try again later.";
+        _isLoading = false;
+        _dataReady = true;
+      });
+    } catch (e) {
+      print("Unexpected error: $e");
+      setState(() {
+        _errorMessage = "Unexpected error occurred.";
         _isLoading = false;
         _dataReady = true;
       });
     }
   }
+
 
   Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForPages({
     bool forceRefresh = false,
@@ -297,6 +363,17 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
       if (cachedData != null) {
         return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
       }
+    }
+
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return [];
     }
     final url = Uri.parse(
       'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
@@ -402,6 +479,18 @@ class _NotebookDetailPageState extends State<NotebookDetailPage>
         return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
       }
     }
+
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return [];
+    }
+
     final url = Uri.parse(
       'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
     );

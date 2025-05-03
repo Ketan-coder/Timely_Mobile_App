@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
@@ -80,14 +81,16 @@ class _HomePageState extends State<HomePage>
   Future<void> _initializeData() async {
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
+      if (mounted) {
       setState(() => _isRefreshing = true);
-      await auth_service.AuthService.fetchNotebooks(_token!);
+      await auth_service.AuthService.fetchNotebooks(_token!, _internetChecker);
       await _loadNotebooks();
       setState(() => _isRefreshing = false);
       _filteredNotebooks =
           _notebooks.map((map) => Notebook.fromJson(map)).toList();
       _filterWith = 'all';
       _filterNotebooks();
+      }
     } else {
       showAnimatedSnackBar(
           context, 'You are not Authenticated! Please Login!', isError: true);
@@ -358,7 +361,7 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> toggleIsPublic(int notebookID, bool currentStatus) async {
-    // If making it public, ask for confirmation
+    // 1. Ask confirmation if making public
     if (!currentStatus) {
       final confirm = await showDialog<bool>(
         context: context,
@@ -393,48 +396,78 @@ class _HomePageState extends State<HomePage>
       if (confirm != true) return; // User cancelled
     }
 
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/notebooks/$notebookID/',
-    );
-
-    final response = await http.patch(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $_token',
-      },
-      body: jsonEncode({'is_public': !currentStatus}),
-    );
-
-    if (response.statusCode == 200) {
+    // 2. Check internet
+    if (!_internetChecker.isConnected) {
       showAnimatedSnackBar(
         context,
-        !currentStatus
-            ? "This notebook is now public. Anyone on the platform can access it!"
-            : "This notebook is now private. Only you can access it.",
-        isSuccess: true,
+        "You're offline. Please check your internet connection.",
+        isError: true,
         isTop: true,
       );
+      return;
+    }
 
-      setState(() {
-        _notebooks = _notebooks.map((notebook) {
-          if (notebook['id'] == notebookID) {
-            notebook['is_public'] = !currentStatus;
-          }
-          return notebook;
-        }).toList();
-      });
+    final url = Uri.parse('https://timely.pythonanywhere.com/api/v1/notebooks/$notebookID/');
 
-      _initializeData();
-    } else {
+    try {
+      final response = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $_token',
+        },
+        body: jsonEncode({'is_public': !currentStatus}),
+      );
+
+      if (response.statusCode == 200) {
+        showAnimatedSnackBar(
+          context,
+          !currentStatus
+              ? "This notebook is now public. Anyone on the platform can access it!"
+              : "This notebook is now private. Only you can access it.",
+          isSuccess: true,
+          isTop: true,
+        );
+
+        // Update local list
+        setState(() {
+          _notebooks = _notebooks.map((notebook) {
+            if (notebook['id'] == notebookID) {
+              notebook['is_public'] = !currentStatus;
+            }
+            return notebook;
+          }).toList();
+        });
+
+        _initializeData();
+      } else {
+        print("Failed PATCH response: ${response.statusCode} - ${response.body}");
+        showAnimatedSnackBar(
+          context,
+          "Failed to update visibility. Please try again.",
+          isError: true,
+          isTop: true,
+        );
+      }
+    } on SocketException catch (e) {
+      print("Network error: $e");
       showAnimatedSnackBar(
         context,
-        "Failed to update visibility. Please try again.",
+        "Cannot reach server. Please check your internet.",
+        isError: true,
+        isTop: true,
+      );
+    } catch (e) {
+      print("Unexpected error: $e");
+      showAnimatedSnackBar(
+        context,
+        "Something went wrong while updating visibility.",
         isError: true,
         isTop: true,
       );
     }
   }
+
 
 
 
