@@ -318,6 +318,70 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
                     String reminder = reminderController.text.trim();
                     if (reminder.isNotEmpty) {
                       await _addReminderAPI(reminder, selectedDateTime);
+                      // await ApiService.makeApiCall(
+                      //     token: _token!,
+                      //     endpoint: '/api/v1/remainders/',
+                      //     internetChecker: _internetChecker,
+                      //     method: 'POST',
+                      //     successStatusCode: 201,
+                      //     body: {
+                      //       'title': reminder.trim(),
+                      //       'body': reminder.trim(),
+                      //       'alert_time': selectedDateTime.toIso8601String(),
+                      //     },
+                      //     onSuccess: (response) async {
+                      //     _initializeData();
+                      //       //print("Response ==>");
+                      //       //print(response.body);
+                      //       final responseData = jsonDecode(response['body']);
+                      //       int newlyCreatedReminder = responseData['id'];
+                      //       //print("ID ==>");
+                      //       //print(newly_created_reminder);
+                      //       showAnimatedSnackBar(
+                      //         context,
+                      //         "$reminder Added Successfully",
+                      //         isSuccess: true,
+                      //         isTop: true,
+                      //       );
+                      //       if (selectedDateTime.isAfter(DateTime.now())) {
+                      //         // print('[Notification Scheduled] → $alertTime');
+                      //         // await NotificationService.scheduleUsingShow(
+                      //         //   id: DateTime
+                      //         //       .now()
+                      //         //       .millisecondsSinceEpoch ~/ 1000,
+                      //         //   title: reminderName,
+                      //         //   body: reminderName,
+                      //         //   scheduledDate: alertTime,
+                      //         // );
+                      //         NotificationService.addManualNotification(
+                      //           id: newlyCreatedReminder,
+                      //           title: "Reminders",
+                      //           body: formatReminderBody(reminder),
+                      //           scheduledDate: selectedDateTime,
+                      //           channelId: 'reminder_channel',
+                      //           channelName: 'Reminders',
+                      //           channelDescription: 'Channel for reminder notifications',
+                      //         );
+                      //         final alarmService = AlarmService();
+                      //         alarmService.setAlarm(
+                      //           selectedDateTime,
+                      //           newlyCreatedReminder,
+                      //           alarmTriggeredCallback,
+                      //           reminder,
+                      //           formatReminderBody(reminder),
+                      //         );
+                      //         //print('[Notification Scheduled] → $alertTime');
+                      //       }
+                      //     },
+                      //     onFailure: (response) {
+                      //       showAnimatedSnackBar(
+                      //         context,
+                      //         "Failed to create Remainder!",
+                      //         isError: true,
+                      //         isTop: true,
+                      //       );
+                      //     }
+                      //   );
                       Navigator.of(context).pop(); // Close dialog
                     }
                   },
@@ -675,20 +739,108 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
                             ),
                           ),
                           trailing: IconButton(onPressed: () async {
-                            await _deleteReminder(
-                                context, reminder['id'], reminder['title']);
+                            String reminderName = reminder['title'];
+                            await ApiService.makeApiCall(
+                                  token: _token!,
+                                  endpoint: '/api/v1/remainders/',
+                                  internetChecker: _internetChecker,
+                                  method: 'DELETE',
+                                  successStatusCode: 204,
+                                  objectId: reminder['id'].toString(),
+                                  onSuccess: (json) async {
+                                    _initializeData();
+                                      showAnimatedSnackBar(
+                                          context,
+                                          "$reminderName has been Deleted Successfully",
+                                          isInfo: true, isTop: true);
+                                  },
+                                  onFailure: (response) {
+                                    showAnimatedSnackBar(
+                                      context,
+                                      "Failed to delete Todo!",
+                                      isError: true,
+                                      isTop: true,
+                                    );
+                                  }
+                                );
+                            // await _deleteReminder(
+                            //     context, reminder['id'], reminder['title']);
                           }, icon: Icon(Icons.delete, color: Colors.grey,)),
                           leading: isCompleted
                               ? IconButton(
                             icon: Icon(Icons.done, color: Colors.green),
                             onPressed: () async {
-                              await _toggleCompleted(reminder['id'],
-                                  reminder['title'], isCompleted);
+                              String reminderName = reminder['title'];
+                              await ApiService.makeApiCall(
+                                  token: _token!,
+                                  endpoint: '/api/v1/remainders/',
+                                  internetChecker: _internetChecker,
+                                  method: 'PATCH',
+                                  objectId: reminder['id'].toString(),
+                                  body: {
+                                    'is_completed': !isCompleted,
+                                  },
+                                  onSuccess: (json) async {
+                                    if (isCompleted) {
+                                      _initializeData();
+                                      showAnimatedSnackBar(
+                                          context,
+                                          "$reminderName has been marked In-Complete Successfully",
+                                          isInfo: true, isTop: true);
+                                    } else {
+                                      _initializeData();
+                                      showAnimatedSnackBar(
+                                          context, "$reminderName has been marked Completed Successfully",
+                                          isSuccess: true, isTop: true);
+                                    }
+                                  },
+                                  onFailure: (response) {
+                                    showAnimatedSnackBar(
+                                      context,
+                                      "Failed to mark Remainder!",
+                                      isError: true,
+                                      isTop: true,
+                                    );
+                                  }
+                                );
+                              // await _toggleCompleted(reminder['id'],
+                              //     reminder['title'], isCompleted);
                             },)
                               : IconButton(icon: Icon(Icons.check_circle),
                             onPressed: () async {
-                              await _toggleCompleted(reminder['id'],
-                                  reminder['title'], isCompleted);
+                              String reminderName = reminder['title'];
+                              await ApiService.makeApiCall(
+                                  token: _token!,
+                                  endpoint: '/api/v1/remainders/',
+                                  internetChecker: _internetChecker,
+                                  method: 'PATCH',
+                                  objectId: reminder['id'].toString(),
+                                  body: {
+                                    'is_completed': !isCompleted,
+                                  },
+                                  onSuccess: (json) async {
+                                    if (isCompleted) {
+                                      _initializeData();
+                                      showAnimatedSnackBar(
+                                          context,
+                                          "$reminderName has been marked In-Complete Successfully",
+                                          isInfo: true, isTop: true);
+                                    } else {
+                                      _initializeData();
+                                      showAnimatedSnackBar(
+                                          context, "$reminderName has been marked Completed Successfully",
+                                          isSuccess: true, isTop: true);
+                                    }
+                                  },
+                                  onFailure: (response) {
+                                    showAnimatedSnackBar(
+                                      context,
+                                      "Failed to delete Todo!",
+                                      isError: true,
+                                      isTop: true,
+                                    );
+                                  }
+                                );
                             },),
                           onLongPress: () async {
                             _editReminder(context, _reminders[index]);
