@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
+import 'package:timely/auth/api_service.dart';
 import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/add_notebook.dart';
@@ -82,14 +83,30 @@ class _HomePageState extends State<HomePage>
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
       if (mounted) {
-      setState(() => _isRefreshing = true);
-      await auth_service.AuthService.fetchNotebooks(_token!, _internetChecker);
-      await _loadNotebooks();
-      setState(() => _isRefreshing = false);
-      _filteredNotebooks =
-          _notebooks.map((map) => Notebook.fromJson(map)).toList();
-      _filterWith = 'all';
-      _filterNotebooks();
+        setState(() => _isRefreshing = true);
+        await ApiService.makeApiCall(
+          token: _token!,
+          endpoint: '/api/v1/notebooks/',
+          internetChecker: _internetChecker,
+          method: 'GET',
+          onSuccess: (json) async {
+            final results = json['results'];
+            if (results is List) {
+              final notebooks = results
+                  .whereType<Map<String, dynamic>>()
+                  .map((item) => Notebook.fromJson(item))
+                  .toList();
+              await auth_service.AuthService.saveNotebooksLocally(notebooks);
+            }
+          },
+        );
+
+        await _loadNotebooks();
+        setState(() => _isRefreshing = false);
+        _filteredNotebooks =
+            _notebooks.map((map) => Notebook.fromJson(map)).toList();
+        _filterWith = 'all';
+        _filterNotebooks();
       }
     } else {
       showAnimatedSnackBar(
@@ -398,76 +415,45 @@ class _HomePageState extends State<HomePage>
       if (confirm != true) return; // User cancelled
     }
 
-    // 2. Check internet
-    if (!_internetChecker.isConnected) {
-      showAnimatedSnackBar(
-        context,
-        "You're offline. Please check your internet connection.",
-        isError: true,
-        isTop: true,
-      );
-      return;
-    }
+    await ApiService.makeApiCall(
+        token: _token!,
+        endpoint: '/api/v1/notebooks/',
+        internetChecker: _internetChecker,
+        method: 'PATCH',
+        objectId: notebookID.toString(),
+        body: {'is_public': (!currentStatus).toString()},
+        onSuccess: (json) async {
+            showAnimatedSnackBar(
+            context,
+            !currentStatus
+                ? "This notebook is now public. Anyone on the platform can access it!"
+                : "This notebook is now private. Only you can access it.",
+            isSuccess: true,
+            isTop: true,
+          );
 
-    final url = Uri.parse('https://timely.pythonanywhere.com/api/v1/notebooks/$notebookID/');
+          // Update local list
+          setState(() {
+            _notebooks = _notebooks.map((notebook) {
+              if (notebook['id'] == notebookID) {
+                notebook['is_public'] = !currentStatus;
+              }
+              return notebook;
+            }).toList();
+          });
 
-    try {
-      final response = await http.patch(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Token $_token',
+          _initializeData();
         },
-        body: jsonEncode({'is_public': !currentStatus}),
+        onFailure: (p0) {
+          print("Failed PATCH response: ${p0.statusCode} - ${p0.body}");
+          showAnimatedSnackBar(
+            context,
+            "Failed to update visibility. Please try again.",
+            isError: true,
+            isTop: true,
+          );
+        },
       );
-
-      if (response.statusCode == 200) {
-        showAnimatedSnackBar(
-          context,
-          !currentStatus
-              ? "This notebook is now public. Anyone on the platform can access it!"
-              : "This notebook is now private. Only you can access it.",
-          isSuccess: true,
-          isTop: true,
-        );
-
-        // Update local list
-        setState(() {
-          _notebooks = _notebooks.map((notebook) {
-            if (notebook['id'] == notebookID) {
-              notebook['is_public'] = !currentStatus;
-            }
-            return notebook;
-          }).toList();
-        });
-
-        _initializeData();
-      } else {
-        print("Failed PATCH response: ${response.statusCode} - ${response.body}");
-        showAnimatedSnackBar(
-          context,
-          "Failed to update visibility. Please try again.",
-          isError: true,
-          isTop: true,
-        );
-      }
-    } on SocketException catch (e) {
-      print("Network error: $e");
-      showAnimatedSnackBar(
-        context,
-        "Cannot reach server. Please check your internet.",
-        isError: true,
-        isTop: true,
-      );
-    } catch (e) {
-      print("Unexpected error: $e");
-      showAnimatedSnackBar(
-        context,
-        "Something went wrong while updating visibility.",
-        isError: true,
-        isTop: true,
-      );
-    }
   }
 
 
@@ -520,7 +506,7 @@ class _HomePageState extends State<HomePage>
       body: RefreshIndicator(
         onRefresh: () async {
           if (_token != null) {
-            _initializeData(); // ✅ Pull-to-refresh now fetches API data
+            _initializeData(); //  Pull-to-refresh now fetches API data
           }
         },
         child: NotificationListener<ScrollNotification>(

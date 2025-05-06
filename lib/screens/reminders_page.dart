@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
+import 'package:timely/auth/api_service.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/screens/notification_test_screen.dart';
 import 'package:timely/services/alarm_service.dart';
@@ -86,7 +87,23 @@ class _RemindersPageState extends State<RemindersPage> with SingleTickerProvider
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
       setState(() => _isRefreshing = true);
-      await auth_service.AuthService.fetchReminders(_token!,_internetChecker);
+      await ApiService.makeApiCall(
+        token: _token!,
+        endpoint: '/api/v1/remainders/',
+        internetChecker: _internetChecker,
+        method: 'GET',
+        onSuccess: (json) async {
+          final results = json['results'];
+          if (results is List) {
+            final reminder = results
+                .whereType<Map<String, dynamic>>()
+                .map((item) => Reminder.fromJson(item))
+                .toList();
+            await auth_service.AuthService.saveRemindersLocally(reminder);
+          }
+        },
+      );
+      // await auth_service.AuthService.fetchReminders(_token!,_internetChecker);
       await _loadReminders();
       setState(() => _isRefreshing = false);
     } else {

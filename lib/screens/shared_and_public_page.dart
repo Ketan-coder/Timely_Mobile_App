@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
+import 'package:timely/auth/api_service.dart';
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/services/internet_checker_service.dart';
@@ -57,8 +58,42 @@ class _SharedAndPublicPageState extends State<SharedAndPublicPage>
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
       setState(() => _isRefreshing = true);
-      await auth_service.AuthService.fetchSharedNotebooks(_token!,_internetChecker);
-      await auth_service.AuthService.fetchPublicNotebooks(_token!, _internetChecker);
+      await ApiService.makeApiCall(
+        token: _token!,
+        endpoint: '/api/v1/notebooks/',
+        internetChecker: _internetChecker,
+        method: 'GET',
+        queryParams: {'shared_with_me': 'True'},
+        onSuccess: (json) async {
+          final results = json['results'];
+          if (results is List) {
+            final notebooks = results
+                .whereType<Map<String, dynamic>>()
+                .map((item) => Notebook.fromJson(item))
+                .toList();
+            await auth_service.AuthService.saveSharedNotebooksLocally(notebooks);
+          }
+        },
+      );
+      await ApiService.makeApiCall(
+        token: _token!,
+        endpoint: '/api/v1/notebooks/',
+        internetChecker: _internetChecker,
+        method: 'GET',
+        queryParams: {'is_public': 'True'},
+        onSuccess: (json) async {
+          final results = json['results'];
+          if (results is List) {
+            final notebooks = results
+                .whereType<Map<String, dynamic>>()
+                .map((item) => Notebook.fromJson(item))
+                .toList();
+            await auth_service.AuthService.savePublicNotebooksLocally(notebooks);
+          }
+        },
+      );
+      // await auth_service.AuthService.fetchSharedNotebooks(_token!,_internetChecker);
+      // await auth_service.AuthService.fetchPublicNotebooks(_token!, _internetChecker);
       await _loadSharedNotebooks();
       setState(() => _isRefreshing = false);
     } else {

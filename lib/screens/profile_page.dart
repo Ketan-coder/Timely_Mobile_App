@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
+import 'package:timely/auth/api_service.dart';
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
@@ -77,8 +78,21 @@ class _ProfilePageState extends State<ProfilePage>
         _userDetails = details!;
         // _isRefreshing = false;
       });
-      final authService = auth_service.AuthService();
-      await authService.fetchUserPreferences(_token!, context);
+      await ApiService.makeApiCall(
+        token: _token!,
+        endpoint: '/api-auth/v1/userpreference/',
+        internetChecker: _internetChecker,
+        method: 'GET',
+        onSuccess: (json) async {
+          final results = json['results'];
+          if (results is List) {
+            final prefsModel = UserPreference.fromJson(results.first);
+            await auth_service.AuthService.saveUserPreferencesLocally(prefsModel.toJson());
+          }
+        },
+      );
+      // final authService = auth_service.AuthService();
+      // await authService.fetchUserPreferences(_token!, context);
       final prefs2 = await auth_service.AuthService
           .loadUserPreferencesFromLocal(); // this has the final usable data
 

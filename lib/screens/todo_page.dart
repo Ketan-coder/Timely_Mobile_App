@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animated_icons/icons8.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:http/http.dart' as http;
+import 'package:timely/auth/api_service.dart';
 import 'package:timely/auth/auth_service.dart' as auth_service;
 import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/models/todo.dart';
@@ -58,7 +59,23 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
       setState(() => _isRefreshing = true);
-      await auth_service.AuthService.fetchTodos(_token!,_internetChecker);
+      await ApiService.makeApiCall(
+        token: _token!,
+        endpoint: '/api/v1/todos/',
+        internetChecker: _internetChecker,
+        method: 'GET',
+        onSuccess: (json) async {
+          final results = json['results'];
+          if (results is List) {
+            final todos = results
+                .whereType<Map<String, dynamic>>()
+                .map((item) => Todo.fromJson(item))
+                .toList();
+            await auth_service.AuthService.saveTodoLocally(todos);
+          }
+        },
+      );
+      // await auth_service.AuthService.fetchTodos(_token!,_internetChecker);
       await _loadTodos();
       setState(() => _isRefreshing = false);
     } else {
@@ -93,95 +110,95 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
   }
 
 
-  Future<void> _toggleCompleted(int todoId, String todoName,
-      bool isCompleted) async {
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/todos/$todoId/',
-    );
-    final response = await http.patch(
-      url,
-      headers: {
-        'Authorization': 'Token $_token', // Replace with actual token
-      },
-      body: {
-        'is_completed': (!isCompleted).toString(),
-      },
-    );
-    //print(response);
-    if (response.statusCode == 200) {
-      if (isCompleted) {
-        _initializeData();
-        showAnimatedSnackBar(
-            context, "$todoName has been marked In-Complete Successfully",
-            isInfo: true, isTop: true);
-      } else {
-        _initializeData();
-        showAnimatedSnackBar(
-            context, "$todoName has been marked Completed Successfully",
-            isSuccess: true, isTop: true);
-      }
-    } else {
-      showAnimatedSnackBar(
-          context, "Something went wrong!", isError: true, isTop: true);
-    }
-  }
+  // // Future<void> _toggleCompleted(int todoId, String todoName,
+  // //     bool isCompleted) async {
+  // //   final url = Uri.parse(
+  // //     'https://timely.pythonanywhere.com/api/v1/todos/$todoId/',
+  // //   );
+  // //   final response = await http.patch(
+  // //     url,
+  // //     headers: {
+  // //       'Authorization': 'Token $_token', // Replace with actual token
+  // //     },
+  // //     body: {
+  // //       'is_completed': (!isCompleted).toString(),
+  // //     },
+  // //   );
+  // //   //print(response);
+  // //   if (response.statusCode == 200) {
+  // //     if (isCompleted) {
+  // //       _initializeData();
+  // //       showAnimatedSnackBar(
+  // //           context, "$todoName has been marked In-Complete Successfully",
+  // //           isInfo: true, isTop: true);
+  // //     } else {
+  // //       _initializeData();
+  // //       showAnimatedSnackBar(
+  // //           context, "$todoName has been marked Completed Successfully",
+  // //           isSuccess: true, isTop: true);
+  // //     }
+  // //   } else {
+  // //     showAnimatedSnackBar(
+  // //         context, "Something went wrong!", isError: true, isTop: true);
+  // //   }
+  // // }
 
-  Future<void> _addTodoAPI(String todoName) async {
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/todos/',
-    );
-    final response = await http.post(
-      url,
-      headers: {
-        'Authorization': 'Token $_token', // Replace with actual token
-      },
-      body: {
-        'title': todoName.trim(),
-      },
-    );
-    //print(response);
-    if (response.statusCode == 201) {
-      _initializeData();
-      showAnimatedSnackBar(
-          context, "$todoName Added Successfully", isSuccess: true,
-          isTop: true);
-    } else {
-      showAnimatedSnackBar(
-          context, "Something went wrong!", isError: true, isTop: true);
-    }
-  }
+  // Future<void> _addTodoAPI(String todoName) async {
+  //   final url = Uri.parse(
+  //     'https://timely.pythonanywhere.com/api/v1/todos/',
+  //   );
+  //   final response = await http.post(
+  //     url,
+  //     headers: {
+  //       'Authorization': 'Token $_token', // Replace with actual token
+  //     },
+  //     body: {
+  //       'title': todoName.trim(),
+  //     },
+  //   );
+  //   //print(response);
+  //   if (response.statusCode == 201) {
+  //     _initializeData();
+  //     showAnimatedSnackBar(
+  //         context, "$todoName Added Successfully", isSuccess: true,
+  //         isTop: true);
+  //   } else {
+  //     showAnimatedSnackBar(
+  //         context, "Something went wrong!", isError: true, isTop: true);
+  //   }
+  // }
 
-  Future<void> _editTodoAPI(int todoId, String updatedTitle) async {
-    final url = Uri.parse(
-        'https://timely.pythonanywhere.com/api/v1/todos/$todoId/');
+  // Future<void> _editTodoAPI(int todoId, String updatedTitle) async {
+  //   final url = Uri.parse(
+  //       'https://timely.pythonanywhere.com/api/v1/todos/$todoId/');
 
-    final response = await http.patch(
-      url,
-      headers: {
-        'Authorization': 'Token $_token',
-      },
-      body: {
-        'title': updatedTitle.trim(),
-      },
-    );
+  //   final response = await http.patch(
+  //     url,
+  //     headers: {
+  //       'Authorization': 'Token $_token',
+  //     },
+  //     body: {
+  //       'title': updatedTitle.trim(),
+  //     },
+  //   );
 
-    if (response.statusCode == 200) {
-      _initializeData();
-      showAnimatedSnackBar(
-        context,
-        "Todo updated successfully",
-        isSuccess: true,
-        isTop: true,
-      );
-    } else {
-      showAnimatedSnackBar(
-        context,
-        "Failed to update Todo!",
-        isError: true,
-        isTop: true,
-      );
-    }
-  }
+  //   if (response.statusCode == 200) {
+  //     _initializeData();
+  //     showAnimatedSnackBar(
+  //       context,
+  //       "Todo updated successfully",
+  //       isSuccess: true,
+  //       isTop: true,
+  //     );
+  //   } else {
+  //     showAnimatedSnackBar(
+  //       context,
+  //       "Failed to update Todo!",
+  //       isError: true,
+  //       isTop: true,
+  //     );
+  //   }
+  // }
 
   Future<void> _editTodo(BuildContext context,
       Map<String, dynamic> todoData) async {
@@ -228,7 +245,32 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                   onPressed: () async {
                     String updatedTodo = todoController.text.trim();
                     if (updatedTodo.isNotEmpty) {
-                      await _editTodoAPI(todoData['id'], updatedTodo);
+                      await ApiService.makeApiCall(
+                          token: _token!,
+                          endpoint: '/api/v1/todos/',
+                          internetChecker: _internetChecker,
+                          method: 'PATCH',
+                          body: {'title': updatedTodo},
+                          objectId: todoData['id'].toString(),
+                          onSuccess: (json) async {
+                            _initializeData();
+                              showAnimatedSnackBar(
+                                context,
+                                "Todo updated successfully",
+                                isSuccess: true,
+                                isTop: true,
+                              );
+                          },
+                          onFailure: (response) {
+                            showAnimatedSnackBar(
+                              context,
+                              "Failed to update Todo!",
+                              isError: true,
+                              isTop: true,
+                            );
+                          }
+                        );
+                      // await _editTodoAPI(todoData['id'], updatedTodo);
                     }
                     Navigator.of(context).pop(); // Close dialog
                   },
@@ -246,27 +288,27 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
   }
 
 
-  Future<void> _deleteTodoAPI(int todoId, String todoName) async {
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/todos/$todoId/',
-    );
-    final response = await http.delete(
-        url,
-        headers: {
-          'Authorization': 'Token $_token', // Replace with actual token
-        }
-    );
-    //print(response);
-    if (response.statusCode == 204) {
-      _initializeData();
-      showAnimatedSnackBar(
-          context, "$todoName Removed!", isSuccess: true,
-          isTop: true);
-    } else {
-      showAnimatedSnackBar(
-          context, "Something went wrong!", isError: true, isTop: true);
-    }
-  }
+  // Future<void> _deleteTodoAPI(int todoId, String todoName) async {
+  //   final url = Uri.parse(
+  //     'https://timely.pythonanywhere.com/api/v1/todos/$todoId/',
+  //   );
+  //   final response = await http.delete(
+  //       url,
+  //       headers: {
+  //         'Authorization': 'Token $_token', // Replace with actual token
+  //       }
+  //   );
+  //   //print(response);
+  //   if (response.statusCode == 204) {
+  //     _initializeData();
+  //     showAnimatedSnackBar(
+  //         context, "$todoName Removed!", isSuccess: true,
+  //         isTop: true);
+  //   } else {
+  //     showAnimatedSnackBar(
+  //         context, "Something went wrong!", isError: true, isTop: true);
+  //   }
+  // }
 
   Future<void> _addTodo(BuildContext context) async {
     TextEditingController todoController = TextEditingController();
@@ -303,7 +345,32 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                 TextButton(
                   onPressed: () async {
                     String todo = todoController.text.trim();
-                    await _addTodoAPI(todo);
+                    await ApiService.makeApiCall(
+                          token: _token!,
+                          endpoint: '/api/v1/todos/',
+                          internetChecker: _internetChecker,
+                          method: 'POST',
+                          body: {'title': todo},
+                          successStatusCode: 201,
+                          onSuccess: (json) async {
+                            _initializeData();
+                              showAnimatedSnackBar(
+                                context,
+                                "Todo Created successfully",
+                                isSuccess: true,
+                                isTop: true,
+                              );
+                          },
+                          onFailure: (response) {
+                            showAnimatedSnackBar(
+                              context,
+                              "Failed to create Todo!",
+                              isError: true,
+                              isTop: true,
+                            );
+                          }
+                        );
+                    // await _addTodoAPI(todo);
                     Navigator.of(context).pop(); // Close dialog
                   },
                   child: const Text(
@@ -342,7 +409,32 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                 ),
                 TextButton(
                   onPressed: () async {
-                    await _deleteTodoAPI(todoID, todoName);
+                    await ApiService.makeApiCall(
+                          token: _token!,
+                          endpoint: '/api/v1/todos/',
+                          internetChecker: _internetChecker,
+                          method: 'DELETE',
+                          objectId: todoID.toString(),
+                          successStatusCode: 204,
+                          onSuccess: (json) async {
+                            _initializeData();
+                              showAnimatedSnackBar(
+                                context,
+                                "Todo deleted successfully",
+                                isSuccess: true,
+                                isTop: true,
+                              );
+                          },
+                          onFailure: (response) {
+                            showAnimatedSnackBar(
+                              context,
+                              "Failed to delete Todo!",
+                              isError: true,
+                              isTop: true,
+                            );
+                          }
+                        );
+                    // await _deleteTodoAPI(todoID, todoName);
                     Navigator.of(context).pop(); // Close dialog
                   },
                   child: const Text(
@@ -527,8 +619,37 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                                 leading: IconButton(
                                   icon: Icon(Icons.check_circle),
                                   onPressed: () async {
-                                    await _toggleCompleted(
-                                        todo['id'], todo['title'], false);
+                                    String todoName = todo['title'];
+                                    bool isCompleted = todo['is_completed'];
+
+                                    await ApiService.makeApiCall(
+                                        token: _token!,
+                                        endpoint: '/api/v1/todos/',
+                                        internetChecker: _internetChecker,
+                                        objectId: todo['id'].toString(),
+                                        method: 'PATCH',
+                                        body: {'is_completed': (!isCompleted).toString(),},
+                                        onSuccess: (json) async {
+                                            if (isCompleted) {
+                                                  _initializeData();
+                                                  showAnimatedSnackBar(
+                                                      context, "$todoName has been marked In-Complete Successfully",
+                                                      isInfo: true, isTop: true);
+                                                } else {
+                                                  _initializeData();
+                                                  showAnimatedSnackBar(
+                                                      context, "$todoName has been marked Completed Successfully",
+                                                      isSuccess: true, isTop: true);
+                                                }
+                                        },
+                                        onFailure: (response) {
+                                          showAnimatedSnackBar(
+                                              context, "Something went wrong!",
+                                              isError: true, isTop: true);
+                                        }
+                                      );
+                                    // await _toggleCompleted(
+                                    //     todo['id'], todo['title'], false);
                                   },
                                 ),
                                 onTap: () => _editTodo(context, todo),
@@ -624,8 +745,37 @@ class _TodoPageState extends State<TodoPage> with SingleTickerProviderStateMixin
                                 leading: IconButton(
                                   icon: Icon(Icons.done, color: Colors.green),
                                   onPressed: () async {
-                                    await _toggleCompleted(
-                                        todo['id'], todo['title'], true);
+                                    // await _toggleCompleted(
+                                    //     todo['id'], todo['title'], true);
+                                    String todoName = todo['title'];
+                                    bool isCompleted = todo['is_completed'];
+
+                                    await ApiService.makeApiCall(
+                                        token: _token!,
+                                        endpoint: '/api/v1/todos/',
+                                        internetChecker: _internetChecker,
+                                        objectId: todo['id'].toString(),
+                                        method: 'PATCH',
+                                        body: {'is_completed': (!isCompleted).toString(),},
+                                        onSuccess: (json) async {
+                                            if (isCompleted) {
+                                                  _initializeData();
+                                                  showAnimatedSnackBar(
+                                                      context, "$todoName has been marked In-Complete Successfully",
+                                                      isInfo: true, isTop: true);
+                                                } else {
+                                                  _initializeData();
+                                                  showAnimatedSnackBar(
+                                                      context, "$todoName has been marked Completed Successfully",
+                                                      isSuccess: true, isTop: true);
+                                                }
+                                        },
+                                        onFailure: (response) {
+                                          showAnimatedSnackBar(
+                                              context, "Something went wrong!",
+                                              isError: true, isTop: true);
+                                        }
+                                      );
                                   },
                                 ),
                                 onTap: () => _editTodo(context, todo),
