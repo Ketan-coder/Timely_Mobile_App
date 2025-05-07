@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:timely/auth/api_service.dart';
 import 'package:timely/components/button.dart';
 import 'package:timely/components/custom_loading_animation.dart';
+import 'package:timely/models/user_preference.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
 import 'package:timely/services/internet_checker_service.dart';
@@ -40,6 +41,7 @@ class _HomePageState extends State<HomePage>
   late AnimationController _bookController;
   final BiometricAuth biometricAuth = BiometricAuth();
   late InternetChecker _internetChecker;
+  UserPreference? _prefs2;
 
   @override
   void initState() {
@@ -101,6 +103,28 @@ class _HomePageState extends State<HomePage>
           },
         );
 
+        await ApiService.makeApiCall(
+            token: _token!,
+            endpoint: '/api-auth/v1/userpreference/',
+            internetChecker: _internetChecker,
+            method: 'GET',
+            onSuccess: (json) async {
+              final results = json['results'];
+              if (results is List) {
+                final prefsModel = UserPreference.fromJson(results.first);
+                await auth_service.AuthService.saveUserPreferencesLocally(prefsModel.toJson());
+              }
+            },
+          );
+          // final authService = auth_service.AuthService();
+          // await authService.fetchUserPreferences(_token!, context);
+          final prefs2 = await auth_service.AuthService
+          .loadUserPreferencesFromLocal();
+          setState(() {
+            _prefs2 = prefs2;
+          });
+        print("User Preferences: ${_prefs2?.toJson()}");
+        print("User Biometric: ${_prefs2?.biometricEnabled}");
         await _loadNotebooks();
         setState(() => _isRefreshing = false);
         _filteredNotebooks =
@@ -165,7 +189,10 @@ class _HomePageState extends State<HomePage>
       ));
       return;
     }
+    if (_prefs2 != null && _prefs2!.biometricEnabled) {
+      // If biometric authentication is enabled, show the biometric dialog first.
 
+    
     // Flag to decide whether to show the password dialog.
     bool showPasswordDialog = true;
 
@@ -241,7 +268,7 @@ class _HomePageState extends State<HomePage>
 
     // Only show the password dialog if we haven't authenticated via biometrics.
     if (!showPasswordDialog) return;
-
+    }
     // Show password input dialog fallback.
     TextEditingController passwordController = TextEditingController();
     bool isWrongPassword = false;
