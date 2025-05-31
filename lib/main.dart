@@ -98,48 +98,48 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         FlutterQuillLocalizations.delegate,
       ],
-      theme: ThemeData(
-        fontFamily: 'Poppins',
-        primaryColor: Colors.deepPurple,
-        primaryColorDark: Colors.deepPurple[800],
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          primary: Colors.deepPurple[300],
-          secondary: Colors.deepPurple[200],
-          onError: Colors.red[800],
-          errorContainer: Colors.red[100],
-          tertiary: Colors.deepPurple[100],
-          surface: Colors.black87,
-          inverseSurface: Colors.white,
-          onPrimary: Colors.deepPurple[50],
-        ),
-        useMaterial3: true,
-      ),
-      darkTheme: ThemeData.dark().copyWith(
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(
-            fontFamily: 'Poppins',
-          ),
-          bodyLarge: TextStyle(
-            fontFamily: 'Poppins',
-          ),
-          bodySmall: TextStyle(
-            fontFamily: 'Poppins',
-          ),
-        ),
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
-          primary: Colors.deepPurple[100],
-          secondary: Colors.deepPurple[200],
-          onError: Colors.red[800],
-          errorContainer: Colors.red[100],
-          tertiary: Colors.deepPurple[100],
-          surface: Colors.white,
-          inverseSurface: Colors.black,
-          onPrimary: Colors.black38,
-        ),
-        scaffoldBackgroundColor: Colors.black,
-      ),
+      // theme: ThemeData(
+      //   fontFamily: 'Poppins',
+      //   primaryColor: Colors.deepPurple,
+      //   primaryColorDark: Colors.deepPurple[800],
+      //   colorScheme: ColorScheme.fromSeed(
+      //     seedColor: Colors.deepPurple,
+      //     primary: Colors.deepPurple[300],
+      //     secondary: Colors.deepPurple[200],
+      //     onError: Colors.red[800],
+      //     errorContainer: Colors.red[100],
+      //     tertiary: Colors.deepPurple[100],
+      //     surface: Colors.black87,
+      //     inverseSurface: Colors.white,
+      //     onPrimary: Colors.deepPurple[50],
+      //   ),
+      //   useMaterial3: true,
+      // ),
+      // darkTheme: ThemeData.dark().copyWith(
+      //   textTheme: const TextTheme(
+      //     bodyMedium: TextStyle(
+      //       fontFamily: 'Poppins',
+      //     ),
+      //     bodyLarge: TextStyle(
+      //       fontFamily: 'Poppins',
+      //     ),
+      //     bodySmall: TextStyle(
+      //       fontFamily: 'Poppins',
+      //     ),
+      //   ),
+      //   colorScheme: ColorScheme.fromSeed(
+      //     seedColor: Colors.deepPurple,
+      //     primary: Colors.deepPurple[100],
+      //     secondary: Colors.deepPurple[200],
+      //     onError: Colors.red[800],
+      //     errorContainer: Colors.red[100],
+      //     tertiary: Colors.deepPurple[100],
+      //     surface: Colors.white,
+      //     inverseSurface: Colors.black,
+      //     onPrimary: Colors.black38,
+      //   ),
+      //   scaffoldBackgroundColor: Colors.black,
+      // ),
       home: _isAuthenticated
           ? const BottomNavBar(currentIndex: 0)
           : const LoginPage(),

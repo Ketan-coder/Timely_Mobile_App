@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:timely/screens/add_notebook.dart';
+import 'package:timely/screens/add_notebook_dummy.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
 import '../auth/auth_service.dart' as auth_service;
 import '../components/custom_page_animation.dart';
@@ -222,7 +223,7 @@ class _HomePageState extends State<HomePage> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => AddNotebookPage(),
+                  builder: (context) => NewAddNotebookPage(),
                 ),
               );
             },
