@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:timely/screens/add_notebook.dart';
+import 'package:timely/screens/add_notebook_old.dart';
 import 'package:timely/screens/profile_page.dart';
 import 'package:timely/screens/reminders_page.dart';
 import 'package:timely/screens/todo_page.dart';

@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/components/custom_page_animation.dart';
 import 'package:timely/components/custom_snack_bar.dart';
 import 'package:timely/components/labels.dart';
-import 'package:timely/screens/add_notebook.dart';
+import 'package:timely/screens/add_notebook_old.dart';
 import 'package:timely/screens/page_detail_page.dart';
 import 'package:timely/screens/subpage_detail_page.dart';
 import 'dart:convert';
@@ -13,6 +13,8 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../components/bottom_nav_bar.dart';
 import 'package:intl/intl.dart';
+
+import 'add_notebook.dart';
 
 class NotebookDetailPage extends StatefulWidget {
   final int notebookId;
@@ -652,7 +654,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                 child: IconButton(
                   onPressed: () {
                     Navigator.of(context).push(createRoute(
-                        AddNotebookPage(notebookId: _notebookData?['id'])));
+                        NewAddNotebookPage(notebookId: _notebookData?['id'])));
                   },
                   icon: const Icon(Icons.edit),
                 ),

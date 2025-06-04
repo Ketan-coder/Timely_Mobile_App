@@ -98,48 +98,63 @@ class _MyAppState extends State<MyApp> {
         GlobalWidgetsLocalizations.delegate,
         FlutterQuillLocalizations.delegate,
       ],
-      // theme: ThemeData(
-      //   fontFamily: 'Poppins',
-      //   primaryColor: Colors.deepPurple,
-      //   primaryColorDark: Colors.deepPurple[800],
-      //   colorScheme: ColorScheme.fromSeed(
-      //     seedColor: Colors.deepPurple,
-      //     primary: Colors.deepPurple[300],
-      //     secondary: Colors.deepPurple[200],
-      //     onError: Colors.red[800],
-      //     errorContainer: Colors.red[100],
-      //     tertiary: Colors.deepPurple[100],
-      //     surface: Colors.black87,
-      //     inverseSurface: Colors.white,
-      //     onPrimary: Colors.deepPurple[50],
-      //   ),
-      //   useMaterial3: true,
-      // ),
-      // darkTheme: ThemeData.dark().copyWith(
-      //   textTheme: const TextTheme(
-      //     bodyMedium: TextStyle(
-      //       fontFamily: 'Poppins',
-      //     ),
-      //     bodyLarge: TextStyle(
-      //       fontFamily: 'Poppins',
-      //     ),
-      //     bodySmall: TextStyle(
-      //       fontFamily: 'Poppins',
-      //     ),
-      //   ),
-      //   colorScheme: ColorScheme.fromSeed(
-      //     seedColor: Colors.deepPurple,
-      //     primary: Colors.deepPurple[100],
-      //     secondary: Colors.deepPurple[200],
-      //     onError: Colors.red[800],
-      //     errorContainer: Colors.red[100],
-      //     tertiary: Colors.deepPurple[100],
-      //     surface: Colors.white,
-      //     inverseSurface: Colors.black,
-      //     onPrimary: Colors.black38,
-      //   ),
-      //   scaffoldBackgroundColor: Colors.black,
-      // ),
+      theme: ThemeData(
+        fontFamily: 'Poppins',
+        primaryColor: Colors.deepPurple,
+        primaryColorDark: Colors.deepPurple[800],
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          primary: Colors.deepPurple[300],
+          secondary: Colors.deepPurple[200],
+          onError: Colors.red[800],
+          errorContainer: Colors.red[100],
+          tertiary: Colors.deepPurple[100],
+          surface: Colors.black87,
+          inverseSurface: Colors.white,
+          onPrimary: Colors.deepPurple[50],
+        ),
+        useMaterial3: true,
+      ),
+      darkTheme: ThemeData.dark()
+          .copyWith( // Start with Material's well-defined dark theme
+        scaffoldBackgroundColor: Colors.black,
+        // Or a very dark grey like Colors.grey[900]
+        textTheme: ThemeData
+            .dark()
+            .textTheme
+            .copyWith( // Ensure Poppins is applied to dark theme text styles
+          bodyMedium: const TextStyle(fontFamily: 'Poppins'),
+          bodyLarge: const TextStyle(fontFamily: 'Poppins'),
+          bodySmall: const TextStyle(fontFamily: 'Poppins'),
+          // You might want to specify other text styles too if needed
+        )
+            .apply( // Ensures text colors have good contrast on dark backgrounds
+          bodyColor: Colors.white, // Example: default body text color
+          displayColor: Colors.white70, // Example: default display text color
+        ),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.deepPurple,
+          brightness: Brightness.dark,
+          // <<< ESSENTIAL!
+          // Let fromSeed generate most colors. Override minimally and carefully.
+          // Example overrides (adjust these to your liking):
+          primary: Colors.deepPurple[300],
+          // A lighter purple can work as primary in dark mode
+          onPrimary: Colors.black,
+          // Ensure this contrasts well with deepPurple[300]
+          secondary: Colors.tealAccent[100],
+          // Example of a different accent
+          onSecondary: Colors.black,
+          surface: Colors.grey[850],
+          // Example: if you want a specific dark surface color
+          onSurface: Colors.white,
+          // Text/icons on surface
+          inverseSurface: Colors.black,
+          // It's often better to let fromSeed handle these unless you have specific needs:
+          // onError: Colors.redAccent[100],
+          // errorContainer: Colors.red[800], // Darker container for dark theme
+        ),
+      ),
       home: _isAuthenticated
           ? const BottomNavBar(currentIndex: 0)
           : const LoginPage(),
