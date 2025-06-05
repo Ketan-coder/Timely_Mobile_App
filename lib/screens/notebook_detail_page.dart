@@ -1,45 +1,89 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_animated_icons/icons8.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timely/auth/user_details_service.dart';
+import 'package:timely/components/custom_loading_animation.dart';
 import 'package:timely/components/custom_page_animation.dart';
 import 'package:timely/components/custom_snack_bar.dart';
-import 'package:timely/components/labels.dart';
-import 'package:timely/screens/add_notebook_old.dart';
+import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/page_detail_page.dart';
 import 'package:timely/screens/subpage_detail_page.dart';
+import 'package:timely/services/internet_checker_service.dart';
 import 'dart:convert';
 import '../auth/auth_service.dart' as auth_service;
 import 'package:flutter_html/flutter_html.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../components/bottom_nav_bar.dart';
-import 'package:intl/intl.dart';
-
-import 'add_notebook.dart';
+import '../models/profile.dart';
+import '../models/shared_notebook.dart';
+import '../utils/date_formatter.dart';
 
 class NotebookDetailPage extends StatefulWidget {
   final int notebookId;
   final bool isPasswordProtected;
+  late bool canEdit;
+  late bool canDelete;
+  late bool canFavourite;
+  late bool canExportToJSON;
+  late bool canExportToPDF;
 
   NotebookDetailPage({
     super.key,
     required this.notebookId,
     this.isPasswordProtected = false,
+    this.canDelete = false,
+    this.canEdit = false,
+    this.canFavourite = false,
+    this.canExportToJSON = false,
+    this.canExportToPDF = false,
   });
 
   @override
   State<NotebookDetailPage> createState() => _NotebookDetailPageState();
 }
 
-class _NotebookDetailPageState extends State<NotebookDetailPage> {
+class _NotebookDetailPageState extends State<NotebookDetailPage>
+    with TickerProviderStateMixin {
   Map<String, dynamic>? _notebookData;
   bool _isLoading = true;
   String _errorMessage = "";
   late String _token;
+  bool _dataReady = false;
+  late AnimationController _bodyController;
+  late AnimationController _actionsController;
+  bool canEditNotebook = false;
+  List<ProfileModel?> sharedUsers = [];
+  late InternetChecker _internetChecker;
+  bool _isConnectedToInternet = true;
 
   @override
   void initState() {
     super.initState();
+    _internetChecker = InternetChecker(context);
+    _internetChecker.startMonitoring();
     _loadTokenAndFetchNotebook();
+    _bodyController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    )
+      ..repeat();
+    _actionsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )
+      ..repeat();
+  }
+
+  @override
+  void dispose() {
+    // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
+    _internetChecker.stopMonitoring();
+    _bodyController.dispose();
+    _actionsController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadTokenAndFetchNotebook() async {
@@ -58,8 +102,20 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
   }
 
   Future<void> _toggleIsFavourite(int notebookID, bool IsFavourite) async {
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return;
+    }
+
     final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
+      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget
+          .notebookId}/',
     );
     final response = await http.patch(
       url,
@@ -70,24 +126,47 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       body: jsonEncode({'is_favourite': !IsFavourite}),
     );
     if (response.statusCode == 200) {
-      IsFavourite ? showAnimatedSnackBar(
-          context, "Unhearted", isSuccess: true,
-          isTop: true) : showAnimatedSnackBar(
-          context, "Marked Favourite", isSuccess: true,
-          isTop: true);
+      IsFavourite
+          ? showAnimatedSnackBar(
+        context,
+        "Unhearted",
+        isSuccess: true,
+        isTop: true,
+      )
+          : showAnimatedSnackBar(
+        context,
+        "Marked Favourite",
+        isSuccess: true,
+        isTop: true,
+      );
       setState(() {
         IsFavourite = !IsFavourite;
       });
     } else {
       showAnimatedSnackBar(
-          context, "Something Went Wrong", isError: true,
-          isTop: true);
+        context,
+        "Something Went Wrong",
+        isError: true,
+        isTop: true,
+      );
     }
   }
 
   Future<void> _deleteNotebook(int notebookID, String NotebookName) async {
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return;
+    }
+
     final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
+      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget
+          .notebookId}/',
     );
     final response = await http.delete(
       url,
@@ -98,7 +177,12 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     );
     print(response);
     if (response.statusCode == 204) {
-      showAnimatedSnackBar(context, "${NotebookName} has been Deleted Successfully", isSuccess: true,isTop: true);
+      showAnimatedSnackBar(
+        context,
+        "${NotebookName} has been Deleted Successfully",
+        isSuccess: true,
+        isTop: true,
+      );
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -106,46 +190,222 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
         ),
       );
     } else {
-      showAnimatedSnackBar(context, "Something went wrong!", isError: true,isTop: true);
+      showAnimatedSnackBar(
+        context,
+        "Something went wrong!",
+        isError: true,
+        isTop: true,
+      );
     }
   }
 
   Future<void> _fetchNotebookDetails() async {
-    final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
-    );
-    final response = await http.get(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token $_token', // Replace with actual token
-      },
-    );
+    // if (!_internetChecker.isConnected) {
+    //   print("No internet connection. Skipping API call.");
+    //   showAnimatedSnackBar(
+    //     context,
+    //     "You're offline. Please check your internet connection.",
+    //     isError: true,
+    //     isTop: true,
+    //   );
+    //   return;
+    // }
 
-    if (response.statusCode == 200) {
-      setState(() {
-        _notebookData = jsonDecode(response.body);
-        print(_notebookData);
-        _isLoading = false;
-      });
-    } else if (response.statusCode == 404) {
-      setState(() {
-        _errorMessage = "404 - No Notebook Found!";
-        _isLoading = false;
-      });
-      showAnimatedSnackBar(
-          context, "404 - No Notebook Found!", isError: true,
-          isTop: true);
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Trying to load from device...");
+
+      final localData = await auth_service.AuthService.loadNotebookFromLocal(
+          widget.notebookId);
+      if (localData != null) {
+        setState(() {
+          _notebookData = localData;
+          _dataReady = true;
+          _isLoading = false;
+        });
+        showAnimatedSnackBar(
+          context,
+          "Loaded from device storage.",
+          isSuccess: true,
+          isTop: true,
+        );
+      } else {
+        showAnimatedSnackBar(
+          context,
+          "You're offline and no local data found.",
+          isError: true,
+          isTop: true,
+        );
+      }
+      return;
     }
-    else {
+
+    try {
+      final url = Uri.parse(
+        'https://timely.pythonanywhere.com/api/v1/notebooks/${widget
+            .notebookId}/',
+      );
+
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token $_token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          _notebookData = jsonDecode(response.body);
+        });
+
+        final userDetails = await UserStorageHelper.getUserDetails();
+
+        List<SharedNotebook> sharedNotebookDetails =
+        await auth_service.AuthService.fetchSharedNotebooksByNotebookId(
+          _token,
+          widget.notebookId,
+        );
+
+        List<ProfileModel> allSharedUsers = [];
+
+        if (sharedNotebookDetails.isNotEmpty) {
+          canEditNotebook =
+              sharedNotebookDetails.any((notebook) => notebook.canEdit);
+
+          for (var sharedNotebook in sharedNotebookDetails) {
+            if (sharedNotebook.sharedTo != null &&
+                sharedNotebook.sharedTo.isNotEmpty) {
+              for (var sharedUserProfileId in sharedNotebook.sharedTo) {
+                ProfileModel? user = await auth_service.AuthService
+                    .fetchUserByProfileId(_token, sharedUserProfileId);
+                if (user != null) {
+                  allSharedUsers.add(user);
+                }
+              }
+            }
+          }
+
+          if (allSharedUsers.isNotEmpty) {
+            await auth_service.AuthService.saveUserLocally(
+                widget.notebookId, allSharedUsers);
+            sharedUsers =
+            await auth_service.AuthService.getUserLocally(widget.notebookId);
+          }
+        } else {
+          canEditNotebook = false;
+        }
+
+        // Permission logic
+        if (canEditNotebook) {
+          if (mounted) {
+            setState(() {
+              widget.canEdit = true;
+              widget.canDelete = true;
+              widget.canFavourite = true;
+              widget.canExportToPDF = true;
+              widget.canExportToJSON = true;
+              _dataReady = true;
+              _isLoading = false;
+            });
+          }
+        } else if (userDetails != null &&
+            (userDetails['user_id'] == _notebookData!['author']) &&
+            widget.canEdit != true) {
+          if (mounted) {
+            setState(() {
+              widget.canEdit = true;
+              widget.canDelete = true;
+              widget.canFavourite = true;
+              widget.canExportToPDF = true;
+              widget.canExportToJSON = true;
+              _dataReady = true;
+              _isLoading = false;
+            });
+          }
+        } else {
+          if (mounted) {
+            setState(() {
+              widget.canEdit = false;
+              widget.canDelete = false;
+              widget.canFavourite = false;
+              widget.canExportToPDF = false;
+              widget.canExportToJSON = false;
+              _dataReady = true;
+              _isLoading = false;
+            });
+          }
+        }
+      } else if (response.statusCode == 404) {
+        setState(() {
+          _errorMessage = "404 - No Notebook Found!";
+          _isLoading = false;
+          _dataReady = true;
+        });
+        showAnimatedSnackBar(
+          context,
+          "404 - No Notebook Found!",
+          isError: true,
+          isTop: true,
+        );
+      } else {
+        setState(() {
+          _errorMessage = "Failed to load notebook.";
+          _isLoading = false;
+          _dataReady = true;
+        });
+      }
+    } on SocketException catch (e) {
+      print("SocketException: $e");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      final localData = await auth_service.AuthService.loadNotebookFromLocal(
+          widget.notebookId);
+      if (localData != null) {
+        setState(() {
+          _isConnectedToInternet = false;
+          _notebookData = localData;
+          _dataReady = true;
+          _isLoading = false;
+        });
+        showAnimatedSnackBar(
+          context,
+          "Loaded from device storage.",
+          isSuccess: true,
+          isTop: true,
+        );
+      } else {
+        showAnimatedSnackBar(
+          context,
+          "You're offline and no local data found.",
+          isError: true,
+          isTop: true,
+        );
+      }
+      return;
+      // setState(() {
+      //   _isConnectedToInternet = false;
+      //   _errorMessage = "Connection error. Try again later.";
+      //   _isLoading = false;
+      //   _dataReady = true;
+      // });
+    } catch (e) {
+      print("Unexpected error: $e");
       setState(() {
-        _errorMessage = "Failed to load notebook.";
+        _errorMessage = "Unexpected error occurred.";
         _isLoading = false;
+        _dataReady = true;
       });
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForPages({bool forceRefresh = false}) async {
+
+  Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForPages({
+    bool forceRefresh = false,
+  }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // final String? cachedData = prefs.getString('notebook_${widget.notebookId}');
 
@@ -154,13 +414,27 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     //   return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
     // }
     if (!forceRefresh) {
-      final String? cachedData = prefs.getString('notebook_${widget.notebookId}');
+      final String? cachedData = prefs.getString(
+        'notebook_${widget.notebookId}',
+      );
       if (cachedData != null) {
         return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
       }
     }
+
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return [];
+    }
     final url = Uri.parse(
-      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget.notebookId}/',
+      'https://timely.pythonanywhere.com/api/v1/notebooks/${widget
+          .notebookId}/',
     );
     final response = await http.get(
       url,
@@ -171,15 +445,18 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     );
 
     if (response.statusCode == 200) {
-      setState(() {
-        _notebookData = jsonDecode(response.body);
-        //print(_notebookData);
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _notebookData = jsonDecode(response.body);
+          //print(_notebookData);
+          _isLoading = false;
+        });
+      }
 
       final Map<String, dynamic> notebookData = jsonDecode(response.body);
       final List<String> pageUuids = List<String>.from(
-          notebookData['pages'] ?? []);
+        notebookData['pages'] ?? [],
+      );
       // final List<String> subpageUuids = List<String>.from(
       //     notebookData['sugpages'] ?? []);
 
@@ -192,8 +469,9 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       // Fetch pages in parallel instead of sequentially
       final List<Map<String, dynamic>?> pages = await Future.wait(
-        pageUuids.map((uuid) =>
-            auth_service.AuthService.fetchPageDetails(uuid, _token)),
+        pageUuids.map(
+              (uuid) => auth_service.AuthService.fetchPageDetails(uuid, _token),
+        ),
       );
 
       // Fetch subpages in parallel instead of sequentially
@@ -204,7 +482,10 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       // Remove null results (failed fetches)
       final List<Map<String, dynamic>> validPages =
-      pages.where((page) => page != null).cast<Map<String, dynamic>>().toList();
+      pages
+          .where((page) => page != null)
+          .cast<Map<String, dynamic>>()
+          .toList();
 
       // Remove null results (failed fetches)
       // final List<Map<String, dynamic>> validSubPages =
@@ -213,10 +494,14 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       // Cache the fetched pages
       await auth_service.AuthService.savePagesLocally(
-          notebookData['id'], validPages);
+        notebookData['id'],
+        validPages,
+      );
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString(
-          'notebook_${widget.notebookId}', jsonEncode(validPages));
+        'notebook_${widget.notebookId}',
+        jsonEncode(validPages),
+      );
 
       // await auth_service.AuthService.saveSubPagesLocally(
       //     notebookData['id'], validSubPages);
@@ -236,8 +521,9 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForSubPages(
-      {bool forceRefresh = false}) async {
+  Future<List<Map<String, dynamic>>> _fetchNotebookDetailsForSubPages({
+    bool forceRefresh = false,
+  }) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     // final String? cachedData = prefs.getString('notebook_${widget.notebookId}');
 
@@ -247,11 +533,24 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     // }
     if (!forceRefresh) {
       final String? cachedData = prefs.getString(
-          'notebook_subpages_${widget.notebookId}');
+        'notebook_subpages_${widget.notebookId}',
+      );
       if (cachedData != null) {
         return List<Map<String, dynamic>>.from(jsonDecode(cachedData));
       }
     }
+
+    if (!_internetChecker.isConnected) {
+      print("No internet connection. Skipping API call.");
+      showAnimatedSnackBar(
+        context,
+        "You're offline. Please check your internet connection.",
+        isError: true,
+        isTop: true,
+      );
+      return [];
+    }
+
     final url = Uri.parse(
       'https://timely.pythonanywhere.com/api/v1/notebooks/${widget
           .notebookId}/',
@@ -265,17 +564,25 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     );
 
     if (response.statusCode == 200) {
-      setState(() {
-        _notebookData = jsonDecode(response.body);
-        print(_notebookData);
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _notebookData = jsonDecode(response.body);
+          //print(_notebookData);
+          _isLoading = false;
+        });
+      }
+      // setState(() {
+      //   _notebookData = jsonDecode(response.body);
+      //   print(_notebookData);
+      //   _isLoading = false;
+      // });
 
       final Map<String, dynamic> notebookData = jsonDecode(response.body);
       final List<String> subpageUuids = List<String>.from(
-          notebookData['sugpages'] ?? []);
-      print("Subpages = >");
-      print(subpageUuids);
+        notebookData['sugpages'] ?? [],
+      );
+      //print(subpageUuids);
+      //print("Subpages = ^");
 
       if (subpageUuids.isEmpty) {
         return []; // No pages found
@@ -283,21 +590,29 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
 
       // Fetch subpages in parallel instead of sequentially
       final List<Map<String, dynamic>?> subpages = await Future.wait(
-        subpageUuids.map((uuid) =>
-            auth_service.AuthService.fetchSubPageDetails(uuid, _token)),
+        subpageUuids.map(
+              (uuid) =>
+              auth_service.AuthService.fetchSubPageDetails(uuid, _token),
+        ),
       );
 
       // Remove null results (failed fetches)
       final List<Map<String, dynamic>> validSubPages =
-      subpages.where((subpages) => subpages != null).cast<
-          Map<String, dynamic>>().toList();
+      subpages
+          .where((subpages) => subpages != null)
+          .cast<Map<String, dynamic>>()
+          .toList();
 
       await auth_service.AuthService.saveSubPagesLocally(
-          notebookData['id'], validSubPages);
-      final SharedPreferences prefsSubpage = await SharedPreferences
-          .getInstance();
+        notebookData['id'],
+        validSubPages,
+      );
+      final SharedPreferences prefsSubpage =
+      await SharedPreferences.getInstance();
       await prefsSubpage.setString(
-          'notebook_subpages_${widget.notebookId}', jsonEncode(validSubPages));
+        'notebook_subpages_${widget.notebookId}',
+        jsonEncode(validSubPages),
+      );
 
       return validSubPages;
     } else {
@@ -308,7 +623,6 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
       return [];
     }
   }
-
 
   Future<void> _showDeleteConfirmationDialog(int notebookID,
       String notebookName,) async {
@@ -355,12 +669,16 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
           builder: (context, setState) {
             late Future<Map<String, dynamic>> _notebookFuture;
 
-            Future<Map<String, dynamic>> _initNotebook({bool forceRefresh=false}) async {
+            Future<Map<String, dynamic>> _initNotebook({
+              bool forceRefresh = false,
+            }) async {
               late List<Map<String, dynamic>> pages;
               late List<Map<String, dynamic>> subpages;
               if (forceRefresh) {
                 pages = await _fetchNotebookDetailsForPages(forceRefresh: true);
-                subpages = await _fetchNotebookDetailsForSubPages(forceRefresh: true);
+                subpages = await _fetchNotebookDetailsForSubPages(
+                  forceRefresh: true,
+                );
               } else {
                 pages = await _fetchNotebookDetailsForPages();
                 subpages = await _fetchNotebookDetailsForSubPages();
@@ -369,10 +687,7 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
               //     dynamic>> pages = await _fetchNotebookDetailsForPages(forceRefresh: true);
               // final List<Map<String,
               //     dynamic>> subpages = await _fetchNotebookDetailsForSubPages(forceRefresh: true);
-              return {
-                'pages': pages,
-                'sugpages': subpages,
-              };
+              return {'pages': pages, 'sugpages': subpages};
             }
 
             _notebookFuture = _initNotebook();
@@ -392,7 +707,8 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                       .colorScheme
                       .inverseSurface,
                   borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(16)),
+                    top: Radius.circular(16),
+                  ),
                 ),
                 child: Column(
                   children: [
@@ -407,14 +723,18 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text(
                             "Pages",
                             style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.refresh),
@@ -430,10 +750,12 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
                             return const Center(
-                                child: CircularProgressIndicator());
+                              child: CircularProgressIndicator(),
+                            );
                           } else if (snapshot.hasError) {
                             return Center(
-                                child: Text("Error: ${snapshot.error}"));
+                              child: Text("Error: ${snapshot.error}"),
+                            );
                           } else if (!snapshot.hasData) {
                             return Center(
                               child: Text(
@@ -449,13 +771,16 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                             );
                           } else {
                             final data = snapshot.data!;
-                            final List<Map<String, dynamic>> pages = List<
-                                Map<String, dynamic>>.from(data['pages'] ?? []);
-                            final List<Map<String, dynamic>> subpages = List<
-                                Map<String, dynamic>>.from(
-                                data['sugpages'] ?? []);
-                            print("Subpagess=>");
-                            print(subpages);
+                            final List<Map<String, dynamic>> pages =
+                            List<Map<String, dynamic>>.from(
+                              data['pages'] ?? [],
+                            );
+                            final List<Map<String, dynamic>> subpages =
+                            List<Map<String, dynamic>>.from(
+                              data['sugpages'] ?? [],
+                            );
+                            //print("Subpagess=>");
+                            //print(subpages);
                             return ListView.builder(
                               padding: const EdgeInsets.all(16),
                               itemCount: pages.length,
@@ -463,40 +788,58 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                                 final page = pages[pageIndex];
                                 final pageUuid = page['page_uuid'];
                                 final pageId = page['id'];
-                                final pageTitle = page['title'] ??
-                                    'Page \${pageIndex + 1}';
+                                final pageTitle =
+                                    page['title'] ?? 'Page \${pageIndex + 1}';
 
-                                final subpagesForPage = subpages.where((
-                                    sub) => sub['page'] == pageId).toList();
+                                final subpagesForPage =
+                                subpages
+                                    .where((sub) => sub['page'] == pageId)
+                                    .toList();
 
                                 return Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     GestureDetector(
                                       onTap: () {
+                                        print("Can Edit: ${widget.canEdit}");
+                                        print(
+                                            "Can Delete: ${widget.canDelete}");
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) =>
+                                            builder:
+                                                (context) =>
                                                 PageDetailsPage(
-                                                    pageUuid: pageUuid),
+                                                  pageUuid: pageUuid,
+                                                  canEdit: widget.canEdit,
+                                                  canDelete: widget.canDelete,
+                                                ),
                                           ),
                                         );
                                       },
                                       child: ListTile(
                                         leading: Container(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 2),
+                                            horizontal: 14,
+                                            vertical: 2,
+                                          ),
                                           decoration: BoxDecoration(
-                                            color: Theme
-                                                .of(context)
+                                            color:
+                                            Theme
+                                                .of(
+                                              context,
+                                            )
                                                 .colorScheme
                                                 .tertiary,
                                             borderRadius: BorderRadius.circular(
-                                                8.0),
+                                              8.0,
+                                            ),
                                             border: Border.all(
-                                              color: Theme
-                                                  .of(context)
+                                              color:
+                                              Theme
+                                                  .of(
+                                                context,
+                                              )
                                                   .colorScheme
                                                   .tertiary,
                                               width: 5.0,
@@ -505,8 +848,11 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                                           child: Text(
                                             "${pageIndex + 1}",
                                             style: TextStyle(
-                                              color: Theme
-                                                  .of(context)
+                                              color:
+                                              Theme
+                                                  .of(
+                                                context,
+                                              )
                                                   .colorScheme
                                                   .surface,
                                               fontSize: 20,
@@ -516,43 +862,66 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                                         ),
                                         title: Text(
                                           pageTitle,
-                                          style: TextStyle(color: Theme
-                                              .of(context)
-                                              .colorScheme
-                                              .surface),
+                                          style: TextStyle(
+                                            color:
+                                            Theme
+                                                .of(
+                                              context,
+                                            )
+                                                .colorScheme
+                                                .surface,
+                                          ),
                                         ),
                                         trailing: const Icon(
-                                            Icons.arrow_forward_ios_rounded),
+                                          Icons.arrow_forward_ios_rounded,
+                                        ),
                                       ),
                                     ),
-                                    ...subpagesForPage.map((sub) =>
-                                        Padding(
-                                          padding: const EdgeInsets.only(
-                                              left: 48.0),
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      SubPageDetailsPage(
-                                                          subpageUuid: sub['subpage_uuid']),
+                                    ...subpagesForPage.map(
+                                          (sub) =>
+                                          Padding(
+                                            padding: const EdgeInsets.only(
+                                              left: 48.0,
+                                            ),
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder:
+                                                        (context,) =>
+                                                        SubPageDetailsPage(
+                                                          subpageUuid:
+                                                          sub['subpage_uuid'],
+                                                          canEdit: widget
+                                                              .canEdit,
+                                                          canDelete:
+                                                          widget.canDelete,
+                                                        ),
+                                                  ),
+                                                );
+                                              },
+                                              child: ListTile(
+                                                leading: const Icon(
+                                                  Icons
+                                                      .subdirectory_arrow_right_rounded,
                                                 ),
-                                              );
-                                            },
-                                            child: ListTile(
-                                              leading: const Icon(Icons
-                                                  .subdirectory_arrow_right_rounded),
-                                              title: Text(
-                                                sub['title'] ?? 'Subpage',
-                                                style: TextStyle(color: Theme
-                                                    .of(context)
-                                                    .colorScheme
-                                                    .surface),
+                                                title: Text(
+                                                  sub['title'] ?? 'Subpage',
+                                                  style: TextStyle(
+                                                    color:
+                                                    Theme
+                                                        .of(
+                                                      context,
+                                                    )
+                                                        .colorScheme
+                                                        .surface,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
-                                        ))
+                                    ),
                                   ],
                                 );
                               },
@@ -571,43 +940,187 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
     );
   }
 
+  void _showSharedUsersBottomSheet(BuildContext context,
+      List<ProfileModel> sharedUsers) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .surface,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: Theme
+                .of(context)
+                .colorScheme
+                .inverseSurface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(16),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title Section
+              Text(
+                "Notebook is shared with",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme
+                      .of(context)
+                      .colorScheme
+                      .primary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // List Section
+              sharedUsers.isNotEmpty
+                  ? Expanded(
+                child: ListView.builder(
+                  itemCount: sharedUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = sharedUsers[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Theme
+                            .of(context)
+                            .colorScheme
+                            .primary,
+                        child: Text(
+                          user.firstName[0].toUpperCase(),
+                          style: TextStyle(
+                            color: Theme
+                                .of(context)
+                                .colorScheme
+                                .surface,
+                          ),
+                        ),
+                      ),
+                      isThreeLine: user.user?.lastLogin != null ? true : false,
+                      title: Text(
+                        "${user.firstName} ${user.lastName}",
+                        style: TextStyle(
+                          color: Theme
+                              .of(context)
+                              .colorScheme
+                              .primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        user.user?.lastLogin != null
+                            ? "${user.email}\nLast Login: ${user.user
+                            ?.lastLogin}"
+                            : user.email,
+                        style: TextStyle(
+                          color: Theme
+                              .of(context)
+                              .colorScheme
+                              .primary,
+                        ),
+                      ),
+                      trailing: widget.canEdit
+                          ? Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.edit,
+                            color: Theme
+                                .of(context)
+                                .colorScheme
+                                .primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "Can Edit",
+                            style: TextStyle(
+                              color: Theme
+                                  .of(context)
+                                  .colorScheme
+                                  .primary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      )
+                          : const SizedBox(),
+                    );
+                  },
+                ),
+              )
+                  : Center(
+                child: Text(
+                  "No shared users found.",
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Theme
+                        .of(context)
+                        .colorScheme
+                        .primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
   void _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      print("Could not launch $url");
-    }
-  }
-
-  String _formatDateTime(String dateTimeString) {
-    try {
-      DateTime dateTime = DateTime.parse(dateTimeString);
-      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(
-          dateTime);
-      return formattedDate;
-    } catch (e) {
-      return "Invalid date";
+      showAnimatedSnackBar(context, 'Could not launch $url');
     }
   }
 
   @override
   Widget build(BuildContext context) {
     bool isFavourite = _notebookData?['is_favourite'] ?? false;
+    bool isShared = _notebookData?['is_shared'] ?? false;
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.inverseSurface,
+      backgroundColor: Theme
+          .of(context)
+          .colorScheme
+          .inverseSurface,
       appBar: AppBar(
         title: widget.isPasswordProtected ? Text("LOCKED NOTEBOOK") : Text(""),
         backgroundColor: Theme
             .of(context)
-            .colorScheme.inverseSurface,
+            .colorScheme
+            .inverseSurface,
         foregroundColor: Theme
             .of(context)
             .colorScheme
             .primary,
       ),
       persistentFooterButtons: [
-        Row(
+        //!_dataReady
+        //? Container(
+        //  padding: EdgeInsets.all(5),
+        //  child: CustomLoadingElement(
+        //    bookController: _actionsController,
+        //    width: 70,
+        //    height: 70,
+        //    padding: EdgeInsets.all(10),
+        //    margin: EdgeInsets.only(top: 0),
+        //    icon: Icons8.edit_ok,
+        //    iconColor: Theme.of(context).colorScheme.surface,
+        //    backgroundColor: Theme.of(context).colorScheme.primary,
+        //  ),
+        //)
+        //:
+        widget.canEdit
+            ? Row(
           children: [
             Expanded(
               flex: 4,
@@ -625,16 +1138,19 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                 ),
                 child: IconButton(
                   onPressed: () async {
-                    await _toggleIsFavourite(_notebookData?['id'], isFavourite);
+                    await _toggleIsFavourite(
+                      _notebookData?['id'],
+                      isFavourite,
+                    );
                     await _loadTokenAndFetchNotebook();
                   },
                   icon:
-                      isFavourite
-                          ? const Icon(Icons.favorite, color: Colors.red)
-                          : Icon(
-                            Icons.favorite_border,
-                            color: Colors.deepPurple.shade100,
-                          ),
+                  isFavourite
+                      ? const Icon(Icons.favorite, color: Colors.red)
+                      : Icon(
+                    Icons.favorite_border,
+                    color: Colors.deepPurple.shade100,
+                  ),
                 ),
               ),
             ),
@@ -653,8 +1169,11 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
                 ),
                 child: IconButton(
                   onPressed: () {
-                    Navigator.of(context).push(createRoute(
-                        NewAddNotebookPage(notebookId: _notebookData?['id'])));
+                    Navigator.of(context).push(
+                      createRoute(
+                        NewAddNotebookPage(notebookId: _notebookData?['id']),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.edit),
                 ),
@@ -685,66 +1204,138 @@ class _NotebookDetailPageState extends State<NotebookDetailPage> {
               ),
             ),
           ],
-        ),
+        )
+            : SizedBox(),
       ],
-      floatingActionButton: FloatingActionButton(
-        //check if the note is favorite or not and change the icon as needed
-        onPressed: () => showPageBottomSheet(context),
-        //check if the note is favorite or not and change the icon as needed
-        child: const Icon(Icons.description_outlined, color: Colors.deepPurple),
+      //floatingActionButton: FloatingActionButton(
+      //  //check if the note is favorite or not and change the icon as needed
+      //  onPressed: () => showPageBottomSheet(context),
+      //  //check if the note is favorite or not and change the icon as needed
+      //  child: const Icon(Icons.description_outlined, color: Colors.deepPurple),
+      //),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end, // Align buttons to the right
+        children: [
+          isShared ? Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: FloatingActionButton(
+                heroTag: 'Show Shared User Sheet Button',
+                backgroundColor: Theme
+                    .of(context)
+                    .colorScheme
+                    .inverseSurface,
+                foregroundColor: Theme
+                    .of(context)
+                    .colorScheme
+                    .onSurface,
+                tooltip: "Show Shared User Sheet",
+                onPressed: () =>
+                    _showSharedUsersBottomSheet(context,
+                        sharedUsers.whereType<ProfileModel>().toList()),
+                child: Icon(Icons.share, color: Theme
+                    .of(context)
+                    .colorScheme
+                    .primary,)
+            ),
+          ) : SizedBox(),
+          SizedBox(width: 12), // Adds spacing between buttons
+          FloatingActionButton(
+            heroTag: 'Show Page Bottom Sheet Button',
+            tooltip: "Show Page Bottom Sheet",
+            onPressed: () => showPageBottomSheet(context),
+            child: Icon(
+                Icons.description_outlined, color: Theme
+                .of(context)
+                .colorScheme
+                .onSurface),
+          ),
+        ],
       ),
       body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _errorMessage.isNotEmpty
-              ? Center(
-                child: Text(_errorMessage, style: TextStyle(color: Colors.red)),
-              )
-              : Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _notebookData?['title'] ?? 'Untitled',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Sora',
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
+      _isLoading && !_dataReady
+          ? Center(
+        child: CustomLoadingElement(
+          bookController: _bodyController,
+          icon: Icons8.book,
+          iconColor: Theme
+              .of(context)
+              .colorScheme
+              .surface,
+          backgroundColor: Theme
+              .of(context)
+              .colorScheme
+              .primary,
+          margin: const EdgeInsets.only(top: 50),
+        ),
+      )
+          : _errorMessage.isNotEmpty
+          ? Center(
+        child: Text(_errorMessage, style: TextStyle(color: Colors.red)),
+      )
+          : Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _notebookData?['title'] ?? 'Untitled',
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Sora',
+                color: Theme
+                    .of(context)
+                    .colorScheme
+                    .secondary,
+              ),
+            ),
+            Text(
+              "Last Updated: ${formatDateTime(_notebookData?['updated_at'])}",
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Sora',
+                color: Theme
+                    .of(context)
+                    .colorScheme
+                    .onSurface,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Divider(),
+            const SizedBox(height: 10),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Html(
+                  //doNotRenderTheseTags: {'iframe','form'},
+                  style: {
+                    '*': Style(
+                      color: Theme
+                          .of(context)
+                          .colorScheme
+                          .onSurface,
+                      backgroundColor:
+                      Theme
+                          .of(context)
+                          .colorScheme
+                          .inverseSurface,
                     ),
-                    Text(
-                      "Last Updated: ${_formatDateTime(
-                          _notebookData?['updated_at'])}",
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Sora',
-                        
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Divider(),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Html(
-                          //doNotRenderTheseTags: {'iframe','form'},
-                          data:
-                              _notebookData?['body'] ??
-                              "<p>No content available</p>",
-                          onAnchorTap: (url, context, attributes) {
-                            if (url != null) {
-                              _launchUrl(url);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
-                  ],
+                  },
+                  data:
+                  _notebookData?['body'] ??
+                      "<p>No content available</p>",
+                  onAnchorTap: (url, context, attributes) {
+                    if (url != null) {
+                      _launchUrl(url);
+                    }
+                  },
                 ),
               ),
+            ),
+            Padding(padding: EdgeInsets.only(top: 20)),
+          ],
+        ),
+      ),
     );
   }
 }

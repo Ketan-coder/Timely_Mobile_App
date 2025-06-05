@@ -1,15 +1,16 @@
+import 'dart:io';
+
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/components/bottom_nav_bar.dart';
 import 'package:timely/services/notification_service.dart';
-import 'components/custom_page_animation.dart';
 import 'screens/login_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
-import 'package:flutter_quill/flutter_quill.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
@@ -33,12 +34,16 @@ void main() async {
   //   title: '🔔 Reminder',
   //   body: 'This is a manually checked notification!',
   //   scheduledDate: DateTime.now().add(Duration(seconds: 10)),
-  //   channelId: 'manual_notifications',
-  //   channelName: 'Manual Notifications',
+  //   channelId: 'reminder_channel',
+  //   channelName: 'Reminders',
   //   channelDescription: 'Notifications that are manually tracked',
   // );
   // debugPrint('🔥 Test notification scheduled!');
-  
+
+  if (!kIsWeb && (Platform.isAndroid)) {
+    await AndroidAlarmManager.initialize();
+  }
+  //await AndroidAlarmManager.initialize();
 
   runApp(const MyApp());
 }
@@ -84,7 +89,6 @@ class _MyAppState extends State<MyApp> {
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
