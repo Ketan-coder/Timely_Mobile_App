@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io' as io show Directory, File; // Keep for image pasting if used
+import 'package:flutter_quill/quill_delta.dart';
 import 'package:vsc_quill_delta_to_html/vsc_quill_delta_to_html.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +36,7 @@ class _NewAddNotebookPageState extends State<NewAddNotebookPage> {
   final ScrollController _editorScrollController = ScrollController();
   bool _isLoading = false;
   bool _isFetching = false; // For loading state while fetching details
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -93,26 +95,32 @@ class _NewAddNotebookPageState extends State<NewAddNotebookPage> {
         if (bodyContent.isNotEmpty) {
           // Try to parse as JSON (Quill Delta) first
           try {
-            //final decodedBody = jsonDecode(bodyContent);
-            final decodedBodyFirst = response['body'] ?? '';
-            final decodedBody = HtmlToDelta().convert(
-                decodedBodyFirst, transformTableAsEmbed: false);
-            _quillController.document = Document.fromJson(
-                List<Map<String, dynamic>>.from(decodedBody as Iterable));
+            final Delta delta = HtmlToDelta().convert(
+              bodyContent,
+              transformTableAsEmbed: false, // Your existing option
+            );
+            // Create a Quill Document directly from the Delta object
+            _quillController.document = Document.fromDelta(delta);
           } catch (e) {
             // If parsing fails, assume it's plain text
+            _hasError = true;
             _quillController.document = Document()
               ..insert(0, bodyContent);
+            showAnimatedSnackBar(
+                context, "Something Went Wrong - $e", isError: true,
+                isTop: true);
           }
         } else {
           _quillController.document = Document.fromJson([{"insert": "\n"}]);
         }
       } else {
+        _hasError = true;
         showAnimatedSnackBar(
             context, "Failed to fetch notebook details.", isError: true,
             isTop: true);
       }
     } catch (e) {
+      _hasError = true;
       showAnimatedSnackBar(
           context, "Error fetching details: ${e.toString()}", isError: true,
           isTop: true);
@@ -446,14 +454,14 @@ class _NewAddNotebookPageState extends State<NewAddNotebookPage> {
               // --- Save Button ---
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : MyButton(
+                  : !_hasError ? MyButton(
                 onPressed: _saveOrUpdateNotebook,
                 text: widget.notebookId != null
                     ? 'Update Notebook'
                     : 'Add Notebook',
                 isGhost: false, // Or as per your styling preference
                 margin: 0, // Adjust as needed
-              ),
+              ) : SizedBox(),
             ],
           ),
         ),
