@@ -1,27 +1,16 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_animated_icons/icons8.dart';
-import 'package:http/http.dart' as http;
-import 'package:timely/auth/api_service.dart';
-import 'package:timely/components/button.dart';
-import 'package:timely/components/custom_loading_animation.dart';
-import 'package:timely/models/user_preference.dart';
+import 'package:timely/screens/add_notebook_old.dart';
 import 'package:timely/screens/add_notebook.dart';
 import 'package:timely/screens/notebook_detail_page.dart';
-import 'package:timely/services/internet_checker_service.dart';
 import '../auth/auth_service.dart' as auth_service;
-import '../components/bottom_nav_bar.dart';
 import '../components/custom_page_animation.dart';
 import '../components/custom_snack_bar.dart';
-import '../components/text_field.dart';
 import '../models/notebook.dart';
-import '../utils/date_formatter.dart';
 import 'login_screen.dart';
+import 'package:crypto/crypto.dart';
 import 'dart:convert';
-import 'package:flutter_slidable/flutter_slidable.dart';
-import 'package:local_auth/local_auth.dart';
-import '../services/biometric_auth.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,41 +19,17 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage>
-    with SingleTickerProviderStateMixin {
+class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> _notebooks = [];
   final double _titleOpacity = 1.0; // Controls title visibility
   bool _isRefreshing = false;
   String? _token; // Store token
-  //Timer? _updateTimer;
-  List<Notebook> _filteredNotebooks = [];
-  late AnimationController _bookController;
-  final BiometricAuth biometricAuth = BiometricAuth();
-  late InternetChecker _internetChecker;
-  UserPreference? _prefs2;
+  Timer? _updateTimer;
 
   @override
   void initState() {
     super.initState();
-    _internetChecker = InternetChecker(context);
-    _internetChecker.startMonitoring();
-    if (_internetChecker.isConnected) {
-      _initializeData();
-    } else {
-      showAnimatedSnackBar(
-        context,
-        "You're offline. Please check your internet connection.",
-        isError: true,
-        isTop: true,
-      );
-    }
-    // _initializeData();
-    _bookController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    )
-      ..repeat();
-    
+    _initializeData();
     // _updateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
     //   if (_token != null) {
     //     print("Here");
@@ -76,81 +41,32 @@ class _HomePageState extends State<HomePage>
   @override
   void dispose() {
     // _updateTimer?.cancel(); // Stop the timer when the widget is disposed
-    _internetChecker.stopMonitoring();
-    _bookController.dispose();
     super.dispose();
   }
 
   Future<void> _initializeData() async {
     _token = await auth_service.AuthService.getToken();
     if (_token != null) {
-      if (mounted) {
-        setState(() => _isRefreshing = true);
-        await ApiService.makeApiCall(
-          token: _token!,
-          endpoint: '/api/v1/notebooks/',
-          internetChecker: _internetChecker,
-          method: 'GET',
-          onSuccess: (json) async {
-            final results = json['results'];
-            if (results is List) {
-              final notebooks = results
-                  .whereType<Map<String, dynamic>>()
-                  .map((item) => Notebook.fromJson(item))
-                  .toList();
-              await auth_service.AuthService.saveNotebooksLocally(notebooks);
-            }
-          },
-        );
-
-        await ApiService.makeApiCall(
-            token: _token!,
-            endpoint: '/api-auth/v1/userpreference/',
-            internetChecker: _internetChecker,
-            method: 'GET',
-            onSuccess: (json) async {
-              final results = json['results'];
-              if (results is List) {
-                final prefsModel = UserPreference.fromJson(results.first);
-                await auth_service.AuthService.saveUserPreferencesLocally(prefsModel.toJson());
-              }
-            },
-          );
-          // final authService = auth_service.AuthService();
-          // await authService.fetchUserPreferences(_token!, context);
-          final prefs2 = await auth_service.AuthService
-          .loadUserPreferencesFromLocal();
-          setState(() {
-            _prefs2 = prefs2;
-          });
-        print("User Preferences: ${_prefs2?.toJson()}");
-        print("User Biometric: ${_prefs2?.biometricEnabled}");
-        await _loadNotebooks();
-        setState(() => _isRefreshing = false);
-        _filteredNotebooks =
-            _notebooks.map((map) => Notebook.fromJson(map)).toList();
-        _filterWith = 'all';
-        _filterNotebooks();
-      }
+      setState(() => _isRefreshing = true);
+      await auth_service.AuthService.fetchNotebooks(_token!);
+      await _loadNotebooks();
+      setState(() => _isRefreshing = false);
     } else {
-      showAnimatedSnackBar(
-          context, 'You are not Authenticated! Please Login!', isError: true);
+      print("Error: Authentication token is null");
     }
     return;
   }
 
   Future<void> _loadNotebooks() async {
-    if (mounted){
-      try {
-        List<Notebook> notebooks =
-        await auth_service.AuthService.loadNotebooksFromLocal();
-        
-        setState(() {
-          _notebooks = notebooks.map((notebook) => notebook.toJson()).toList();
-        });
-      } catch (e) {
-        showAnimatedSnackBar(context, 'Something Went Wrong: $e', isError: true);
-      }
+    try {
+      List<Notebook> notebooks =
+      await auth_service.AuthService.loadNotebooksFromLocal();
+
+      setState(() {
+        _notebooks = notebooks.map((notebook) => notebook.toJson()).toList();
+      });
+    } catch (e) {
+      print("Error loading notebooks: $e");
     }
   }
 
@@ -164,6 +80,15 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  String _formatDateTime(String dateTimeString) {
+    try {
+      DateTime dateTime = DateTime.parse(dateTimeString);
+      String formattedDate = DateFormat("hh:mm a d'th' MMMM, yyyy").format(dateTime);
+      return formattedDate;
+    } catch (e) {
+      return "Invalid date";
+    }
+  }
 
   bool _checkPassword(String inputedPassword, String realPasswordHash) {
     // Hash the entered password
@@ -174,145 +99,47 @@ class _HomePageState extends State<HomePage>
     return inputedPassword == realPasswordHash;
   }
 
-  Future<void> _showPasswordInputDialog(BuildContext context,
-      int notebookID,
-      String notebookName,
-      String realPasswordHash,
-      bool isPasswordProtected,) async {
-    // If the notebook isn't password protected, just navigate to it.
+  Future<void> _showPasswordInputDialog(BuildContext context, int notebookID, String notebookName, String realPasswordHash, bool isPasswordProtected) async {
     if (!isPasswordProtected) {
-      Navigator.of(context).push(createRoute(
-        NotebookDetailPage(
-          notebookId: notebookID,
-          isPasswordProtected: isPasswordProtected,
-        ),
-      ));
-      return;
-    }
-    if (_prefs2 != null && _prefs2!.biometricEnabled) {
-      // If biometric authentication is enabled, show the biometric dialog first.
-
-    
-    // Flag to decide whether to show the password dialog.
-    bool showPasswordDialog = true;
-
-    // Check biometric availability.
-    bool canUseBiometrics = await biometricAuth.isBiometricAvailable();
-    bool hasBiometrics = await biometricAuth.hasEnrolledBiometrics();
-
-    if (canUseBiometrics && hasBiometrics) {
-      int failedAttempts = 0;
-      bool isAuthenticated = false;
-
-      // Allow up to 3 biometric attempts.
-      while (failedAttempts < 1 && !isAuthenticated) {
-        try {
-          isAuthenticated = await biometricAuth.biometricAuthenticate(
-            reason: 'Authenticate to unlock "$notebookName"',
-          );
-
-          if (!isAuthenticated) {
-            failedAttempts++;
-            if (failedAttempts < 1) {
-              showAnimatedSnackBar(
-                context,
-                "Authentication failed. Attempt $failedAttempts/3",
-                isError: true,
-                isTop: true,
-              );
-            }
-          }
-        } catch (e) {
-          if (e.toString().contains("CANCELLED_BY_USER")) {
-            print(e.toString());
-            break; // Exit the biometric loop and go to password dialog
-          }
-          // User cancelled biometric prompt
-          showAnimatedSnackBar(
-            context,
-            "Authentication cancelled by user.",
-            isError: true,
-            isTop: true,
-          );
-          return;
-        }
-      }
-
-
-      if (isAuthenticated) {
-        // Successful biometric authentication: navigate to the notebook and skip the password dialog.
-        Navigator.of(context).push(createRoute(
-          NotebookDetailPage(
-            notebookId: notebookID,
-            isPasswordProtected: isPasswordProtected,
-          ),
-        ));
-        showPasswordDialog = false;
-      } else {
-        showAnimatedSnackBar(
-          context,
-          "Biometric authentication failed! Please use password.",
-          isError: true,
-          isTop: true,
-        );
-      }
-    } else {
-      // Biometrics not available or not enrolled.
-      showAnimatedSnackBar(
-        context,
-        "Biometric not available",
-        isError: true,
-        isTop: true,
-      );
+      //Navigator.push(
+      //  context,
+      //  MaterialPageRoute(builder: (context) => NotebookDetailPage(notebookId: notebookID)),
+      //);
+      Navigator.of(context).push(createRoute(NotebookDetailPage(
+          notebookId: notebookID, isPasswordProtected: isPasswordProtected)));
+      return; // Stop execution, no need to show password dialog
     }
 
-    // Only show the password dialog if we haven't authenticated via biometrics.
-    if (!showPasswordDialog) return;
-    }
-    // Show password input dialog fallback.
     TextEditingController passwordController = TextEditingController();
     bool isWrongPassword = false;
 
     return showDialog<void>(
       context: context,
-      barrierDismissible: false, // Prevent closing when tapping outside.
+      barrierDismissible: false, // Prevent closing when tapping outside
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              backgroundColor: Theme
-                  .of(context)
-                  .colorScheme
-                  .inverseSurface,
-              titleTextStyle: TextStyle(color: Theme
-                  .of(context)
-                  .colorScheme
-                  .primary),
+              backgroundColor: Theme.of(context).colorScheme.inverseSurface,
               title: const Text("Enter Password"),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text("Enter the password to access '$notebookName'.",
-                    style: TextStyle(color: Theme
-                        .of(context)
-                        .colorScheme
-                        .surface),),
+                  Text("Enter the password to access '$notebookName'."),
                   const SizedBox(height: 10),
-                  MyTextField(
+                  TextField(
                     controller: passwordController,
-                    hintext: "Password",
-                    obscuretext: true,
-                    prefixicon: const Icon(Icons.lock),
-                    width: 70,
-                    height: 20,
-                    maxlines: 1,
-                    errorText: isWrongPassword ? "Incorrect password" : null,
+                    obscureText: true, // Hide password input
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      errorText: isWrongPassword ? "Incorrect password" : null,
+                    ),
                   ),
                 ],
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(context).pop(), // ❌ Cancel
                   child: const Text("Cancel"),
                 ),
                 TextButton(
@@ -320,35 +147,28 @@ class _HomePageState extends State<HomePage>
                     String inputPassword = passwordController.text.trim();
 
                     if (_checkPassword(inputPassword, realPasswordHash)) {
-                      Navigator.of(context).pop(); // Close the dialog.
+                      Navigator.of(context).pop(); // ✅ Close dialog
                       showAnimatedSnackBar(
+                          context, "Correct Password", isSuccess: true,
+                          isTop: true);
+                      Navigator.push(
                         context,
-                        "Correct Password",
-                        isSuccess: true,
-                        isTop: true,
-                      );
-                      Navigator.of(context).push(createRoute(
-                        NotebookDetailPage(
-                          notebookId: notebookID,
-                          isPasswordProtected: isPasswordProtected,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              NotebookDetailPage(notebookId: notebookID),
                         ),
-                      ));
+                      );
                     } else {
+                      // ❌ Wrong password, show error
                       setState(() {
                         isWrongPassword = true;
                       });
                       showAnimatedSnackBar(
-                        context,
-                        "Wrong Password! Please Try Again.",
-                        isError: true,
-                        isTop: true,
-                      );
+                          context, "Wrong Password! Please Try Again.",
+                          isError: true, isTop: true);
                     }
                   },
-                  child: const Text(
-                    "Proceed",
-                    style: TextStyle(color: Colors.green),
-                  ),
+                  child: const Text("Proceed", style: TextStyle(color: Colors.green)),
                 ),
               ],
             );
@@ -358,136 +178,14 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-
-  List<Notebook> _searchedNotebooks = [];
-  bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
-  String? _filterWith;
-
-  void _filterNotebooks() {
-    setState(() {
-      if (_filterWith == 'lockedNotebooks') {
-        _filteredNotebooks = _notebooks
-            .map((map) => Notebook.fromJson(map))
-            .where((notebook) => notebook.isPasswordProtected == true)
-            .toList();
-      } else if (_filterWith == 'favouriteNotebooks') {
-        // Assuming you have an 'isFavourite' property in your Notebook model
-        _filteredNotebooks = _notebooks
-            .map((map) => Notebook.fromJson(map))
-            .where((notebook) => notebook.isFavourite == true)
-            .toList();
-      } else if (_filterWith == 'high') {
-        // Assuming you have a 'priority' property in your Notebook model (e.g., 'high', 'medium', 'low')
-        _filteredNotebooks = _notebooks
-            .map((map) => Notebook.fromJson(map))
-            .where((notebook) =>
-        notebook.priority == 0 || notebook.priority == 1)
-            .toList();
-      } else if (_filterWith == 'low') {
-        _filteredNotebooks = _notebooks
-            .map((map) => Notebook.fromJson(map))
-            .where((notebook) =>
-        notebook.priority == 4 || notebook.priority == 5)
-            .toList();
-      } else if (_filterWith == 'isShared') {
-        _filteredNotebooks =
-            _notebooks.map((map) => Notebook.fromJson(map)).where((
-                notebook) => notebook.isShared == true).toList();
-      } else if (_filterWith == 'all' || _filterWith == null) {
-        // If no filter is selected or an invalid filter, show all notebooks
-        _filteredNotebooks =
-            _notebooks.map((map) => Notebook.fromJson(map)).toList();
-      } else {
-        // If no filter is selected or an invalid filter, show all notebooks
-        _filteredNotebooks =
-            _notebooks.map((map) => Notebook.fromJson(map)).toList();
-      }
-    });
-  }
-
-  Future<void> toggleIsPublic(int notebookID, bool currentStatus) async {
-    // 1. Ask confirmation if making public
-    if (!currentStatus) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.inverseSurface,
-          title: const Text("Make Public?"),
-          content: const Text(
-            "Are you sure you want to make this notebook public?\n\n"
-            "Anyone on the platform will be able to access it.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.all<Color>(
-                  Theme.of(context).colorScheme.errorContainer,
-                ),
-                foregroundColor: WidgetStateProperty.all<Color>(
-                  Theme.of(context).colorScheme.error,
-                ),
-              ),
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text("Yes, Make Public"),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm != true) return; // User cancelled
-    }
-
-    await ApiService.makeApiCall(
-        token: _token!,
-        endpoint: '/api/v1/notebooks/',
-        internetChecker: _internetChecker,
-        method: 'PATCH',
-        objectId: notebookID.toString(),
-        body: {'is_public': (!currentStatus).toString()},
-        onSuccess: (json) async {
-            showAnimatedSnackBar(
-            context,
-            !currentStatus
-                ? "This notebook is now public. Anyone on the platform can access it!"
-                : "This notebook is now private. Only you can access it.",
-            isSuccess: true,
-            isTop: true,
-          );
-
-          // Update local list
-          setState(() {
-            _notebooks = _notebooks.map((notebook) {
-              if (notebook['id'] == notebookID) {
-                notebook['is_public'] = !currentStatus;
-              }
-              return notebook;
-            }).toList();
-          });
-
-          _initializeData();
-        },
-        onFailure: (p0) {
-          print("Failed PATCH response: ${p0.statusCode} - ${p0.body}");
-          showAnimatedSnackBar(
-            context,
-            "Failed to update visibility. Please try again.",
-            isError: true,
-            isTop: true,
-          );
-        },
-      );
-  }
-
-
-
-
   @override
   Widget build(BuildContext context) {
+    final Brightness brightness = Theme.of(context).brightness;
+    final bool isDarkMode = brightness == Brightness.dark;
+    print("Is Dark Mode: $isDarkMode");
+    final imageUrl = !isDarkMode
+        ? "https://th.bing.com/th/id/OIP.YRIUUjhcIMvBEf_bbOdpUwHaEU?rs=1&pid=ImgDetMain"
+        : "https://c8.alamy.com/comp/2E064N7/plain-white-background-or-wallpaper-abstract-image-2E064N7.jpg";
 
     return Scaffold(
       backgroundColor: Theme
@@ -522,8 +220,11 @@ class _HomePageState extends State<HomePage>
             heroTag: 'Add Notebook Button',
             tooltip: "Add Notebook",
             onPressed: () {
-              Navigator.of(context).push(
-                createRoute(AddNotebookPage())
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NewAddNotebookPage(),
+                ),
               );
             },
             child: Icon(Icons.add),
@@ -533,7 +234,7 @@ class _HomePageState extends State<HomePage>
       body: RefreshIndicator(
         onRefresh: () async {
           if (_token != null) {
-            _initializeData(); //  Pull-to-refresh now fetches API data
+            _initializeData(); // ✅ Pull-to-refresh now fetches API data
           }
         },
         child: NotificationListener<ScrollNotification>(
@@ -590,7 +291,7 @@ class _HomePageState extends State<HomePage>
                                 color: Theme
                                     .of(context)
                                     .colorScheme
-                                    .primary,
+                                    .primary ?? Colors.white,
                                 fontSize: 48,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -602,227 +303,64 @@ class _HomePageState extends State<HomePage>
                   ],
                 ),
               ),
-              SliverToBoxAdapter( // Added SliverToBoxAdapter for the search bar
-                child: Container(
-                  margin: const EdgeInsets.symmetric(
-                      vertical: 8.0, horizontal: 5.0),
-                  child: MyTextField(
-                    controller: _searchController,
-                    height: 18,
-                    hintTexts: const [
-                      'Search notebooks',
-                      'Search Description',
-                      'Search pages and Subpages'
-                    ],
-                    // Provide a list of hints
-                    hintext: 'Search',
-                    obscuretext: false,
-                    maxlines: 1,
-                    prefixicon: const Icon(Icons.search),
-                    width: 80,
-                    onChanged: (searchText) async {
-                      setState(() {
-                        _isSearching = searchText.isNotEmpty;
-                        _searchedNotebooks = []; // Clear previous results
-                      });
-                      if (searchText.isNotEmpty) {
-                        List<Notebook> results = await auth_service.AuthService
-                            .searchNotebooks(_token!, searchText);
-                        setState(() {
-                          _searchedNotebooks = results;
-                        });
-                        //print('Search results: ${_searchedNotebooks.length}');
-                      } else {
-                        //print('Search text is empty');
-                        setState(() {
-                          _searchedNotebooks = [];
-                          _isSearching = false;
-                        });
-                      }
-                    },
-                  ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 2.0, horizontal: 2.0),
-                      padding: EdgeInsets.only(left: 15.0),
-                      child: Row(
-                        children: [
-                          MyButton(onPressed: () {
-                            setState(() {
-                              _filterWith = 'all';
-                              _filterNotebooks();
-                            });
-                          },
-                              text: 'All Notebooks',
-                              isSmall: true,
-                              isGhost: _filterWith != 'all'),
-                          MyButton(onPressed: () {
-                            setState(() {
-                              _filterWith = 'isShared';
-                              _filterNotebooks();
-                            });
-                          },
-                              text: 'Notebooks - Shared by you',
-                              isSmall: true,
-                              isGhost: _filterWith != 'isShared'),
-                          MyButton(onPressed: () {
-                            Navigator.push(context,
-                                createRoute(BottomNavBar(currentIndex: 3)));
-                          },
-                              text: 'Notebooks - Shared with you',
-                              isSmall: true,
-                              isGhost: true),
-                          MyButton(onPressed: () {
-                            setState(() {
-                              _filterWith = 'lockedNotebooks';
-                              _filterNotebooks();
-                            });
-                          },
-                              text: 'Locked Notebooks',
-                              isSmall: true,
-                              isGhost: _filterWith != 'lockedNotebooks'),
-                          MyButton(onPressed: () {
-                            setState(() {
-                              _filterWith = 'favouriteNotebooks';
-                              _filterNotebooks();
-                            });
-                          },
-                              text: 'Favourite Notebooks',
-                              isSmall: true,
-                              isGhost: _filterWith != 'favouriteNotebooks'),
-                          MyButton(onPressed: () {
-                            setState(() {
-                              _filterWith = 'high';
-                              _filterNotebooks();
-                            });
-                          },
-                              text: 'Highest Priority',
-                              isSmall: true,
-                              isGhost: _filterWith != 'high'),
-                          MyButton(onPressed: () {
-                            setState(() {
-                              _filterWith = 'low';
-                              _filterNotebooks();
-                            });
-                          },
-                              text: 'Lowest Priority',
-                              isSmall: true,
-                              isGhost: _filterWith != 'low'),
-                        ],
-                      )
-                  ),
-                ),
-              ),
               if (_isRefreshing)
-                SliverToBoxAdapter(
-                  child: CustomLoadingElement(bookController: _bookController,backgroundColor: Theme.of(context).colorScheme.primary,)
+                const SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
                 ),
               SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final notebook;
-                    if (_isSearching) {
-                      notebook = _searchedNotebooks[index];
-                    } else if (_filterWith != null) {
-                      notebook = _filteredNotebooks[index];
-                    } else {
-                      notebook = Notebook.fromJson(_notebooks[index]);
-                    }
-
-                    bool isProtected = notebook.isPasswordProtected ?? false;
-                    bool isPublic = notebook.isPublic ?? false;
-                    bool isFavourite = notebook.isFavourite ?? false;
-                    bool isShared = notebook.isShared ?? false;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8, left: 5, right: 5),
-                      child: Slidable(
-                        key: ValueKey(notebook.id),
-                        endActionPane: ActionPane(
-                          motion: const DrawerMotion(),
-                          children: [
-                            SlidableAction(
-                              onPressed: (context) => toggleIsPublic(
-                                notebook.id,
-                                isPublic,
-                              ),
-                              backgroundColor: Theme.of(context).colorScheme.error,
-                              foregroundColor: Theme.of(context).colorScheme.errorContainer,
-                              icon: isPublic ? Icons.person : Icons.public,
-                              label: isPublic ? 'Private' : 'Public',
-                            ),
-                            SlidableAction(
-                              onPressed: (context) {
-                                // Your edit logic here
-                              },
-                              backgroundColor: Theme.of(context).colorScheme.primary,
-                              foregroundColor: Theme.of(context).colorScheme.surface,
-                              icon: isShared ? Icons.undo_sharp : Icons.share,
-                              label: isShared ? 'Un-Share' : 'Share',
-                            ),
-                          ],
-                        ),
-                        child: ListTile(
-                          textColor: Theme
-                              .of(context)
-                              .colorScheme
-                              .surface,
-                          title: Text(
-                            notebook.title ?? 'Untitled',
-                            style: TextStyle(
-                              color: Theme
+                      (context, index) {
+                        final notebook = _notebooks[index];
+                        bool isProtected = notebook['is_password_protected'] ??
+                            false;
+                        return Padding(
+                          padding: const EdgeInsets.only(
+                              top: 8, left: 5, right: 5),
+                          child: ListTile(
+                            textColor: Theme
+                                .of(context)
+                                .colorScheme
+                                .surface,
+                            title: Text(notebook['title'] ?? 'Untitled',
+                              style: TextStyle(color: Theme
                                   .of(context)
                                   .colorScheme
                                   .primary,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              fontFamily: 'Sora',
-                            ),
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  fontFamily: 'Sora'),),
+                            subtitle: Text(
+                                '${_formatDateTime(notebook['updated_at'])}'),
+                            leading: Icon(Icons.book, color: Theme
+                                .of(context)
+                                .colorScheme
+                                .tertiary,),
+                            trailing: isProtected
+                                ? const Icon(Icons.lock, color: Colors.red)
+                                : const SizedBox(),
+                            onTap: () async {
+                              await _showPasswordInputDialog(
+                                  context, notebook['id'], notebook['title'],
+                                  notebook['password'].toString(), isProtected);
+                              // Navigator.push(
+                              //   context,
+                              //   MaterialPageRoute(
+                              //     builder: (context) => NotebookDetailPage(
+                              //       notebookId: notebook['id'],
+                              //       isPasswordProtected: isProtected,
+                              //     ),
+                              //   ),
+                              // );
+                            },
                           ),
-                          subtitle: Text(
-                              formatDateTime((notebook.updatedAt).toString())),
-                          leading: Icon(Icons.book,
-                              color: Theme
-                                  .of(context)
-                                  .colorScheme
-                                  .tertiary),
-                          trailing: isProtected
-                              ? Icon(Icons.lock,
-                              color: Theme
-                                  .of(context)
-                                  .colorScheme
-                                  .primary)
-                              : isPublic
-                              ? Icon(Icons.public, color: Colors.green)
-                              : isFavourite
-                              ? Icon(Icons.favorite, color: Colors.red)
-                              : isShared
-                              ? Icon(Icons.share, color: Colors.blue)
-                              : SizedBox(),
-                          //isThreeLine: isShared ? true : false,
-                          onTap: () async {
-                            await _showPasswordInputDialog(
-                              context,
-                              notebook.id!,
-                              notebook.title,
-                              notebook.password.toString(),
-                              isProtected,
-                            );
-                          },
-                        ),
-                      ),
-                    );
+                        );
                   },
-                  childCount: _isSearching
-                      ? _searchedNotebooks.length
-                      : _filterWith != null
-                          ? _filteredNotebooks.length
-                          : _notebooks.length,
+                  childCount: _notebooks.length,
                 ),
               ),
             ],

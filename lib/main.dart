@@ -1,14 +1,15 @@
-import 'dart:io';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timely/components/bottom_nav_bar.dart';
 import 'package:timely/services/notification_service.dart';
+import 'components/custom_page_animation.dart';
 import 'screens/login_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+import 'package:flutter_quill/flutter_quill.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 FlutterLocalNotificationsPlugin();
@@ -32,16 +33,12 @@ void main() async {
   //   title: '🔔 Reminder',
   //   body: 'This is a manually checked notification!',
   //   scheduledDate: DateTime.now().add(Duration(seconds: 10)),
-  //   channelId: 'reminder_channel',
-  //   channelName: 'Reminders',
+  //   channelId: 'manual_notifications',
+  //   channelName: 'Manual Notifications',
   //   channelDescription: 'Notifications that are manually tracked',
   // );
   // debugPrint('🔥 Test notification scheduled!');
-
-  if (!kIsWeb && (Platform.isAndroid)) {
-    await AndroidAlarmManager.initialize();
-  }
-  //await AndroidAlarmManager.initialize();
+  
 
   runApp(const MyApp());
 }
@@ -95,6 +92,12 @@ class _MyAppState extends State<MyApp> {
       title: 'Flutter Auth Demo',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.system,
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        FlutterQuillLocalizations.delegate,
+      ],
       theme: ThemeData(
         fontFamily: 'Poppins',
         primaryColor: Colors.deepPurple,
@@ -112,30 +115,45 @@ class _MyAppState extends State<MyApp> {
         ),
         useMaterial3: true,
       ),
-      darkTheme: ThemeData.dark().copyWith(
-        textTheme: const TextTheme(
-          bodyMedium: TextStyle(
-            fontFamily: 'Poppins',
-          ),
-          bodyLarge: TextStyle(
-            fontFamily: 'Poppins',
-          ),
-          bodySmall: TextStyle(
-            fontFamily: 'Poppins',
-          ),
+      darkTheme: ThemeData.dark()
+          .copyWith( // Start with Material's well-defined dark theme
+        scaffoldBackgroundColor: Colors.black,
+        // Or a very dark grey like Colors.grey[900]
+        textTheme: ThemeData
+            .dark()
+            .textTheme
+            .copyWith( // Ensure Poppins is applied to dark theme text styles
+          bodyMedium: const TextStyle(fontFamily: 'Poppins'),
+          bodyLarge: const TextStyle(fontFamily: 'Poppins'),
+          bodySmall: const TextStyle(fontFamily: 'Poppins'),
+          // You might want to specify other text styles too if needed
+        )
+            .apply( // Ensures text colors have good contrast on dark backgrounds
+          bodyColor: Colors.white, // Example: default body text color
+          displayColor: Colors.white70, // Example: default display text color
         ),
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.deepPurple,
-          primary: Colors.deepPurple[100],
-          secondary: Colors.deepPurple[200],
-          onError: Colors.red[800],
-          errorContainer: Colors.red[100],
-          tertiary: Colors.deepPurple[100],
-          surface: Colors.white,
+          brightness: Brightness.dark,
+          // <<< ESSENTIAL!
+          // Let fromSeed generate most colors. Override minimally and carefully.
+          // Example overrides (adjust these to your liking):
+          primary: Colors.deepPurple[300],
+          // A lighter purple can work as primary in dark mode
+          onPrimary: Colors.black,
+          // Ensure this contrasts well with deepPurple[300]
+          secondary: Colors.tealAccent[100],
+          // Example of a different accent
+          onSecondary: Colors.black,
+          surface: Colors.grey[850],
+          // Example: if you want a specific dark surface color
+          onSurface: Colors.white,
+          // Text/icons on surface
           inverseSurface: Colors.black,
-          onPrimary: Colors.black38,
+          // It's often better to let fromSeed handle these unless you have specific needs:
+          // onError: Colors.redAccent[100],
+          // errorContainer: Colors.red[800], // Darker container for dark theme
         ),
-        scaffoldBackgroundColor: Colors.black,
       ),
       home: _isAuthenticated
           ? const BottomNavBar(currentIndex: 0)

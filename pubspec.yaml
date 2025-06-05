@@ -41,16 +41,13 @@ dependencies:
   flutter_html: ^3.0.0
   url_launcher: ^6.3.1
   intl: ^0.19.0
-  flutter_quill: ^9.0.0
+  flutter_quill: ^11.4.1
+  flutter_quill_extensions: ^11.0.0
   flutter_keyboard_visibility: ^6.0.0
   flutter_local_notifications: ^19.0.0
   permission_handler: ^12.0.0+1
-  android_alarm_manager_plus: ^4.0.7
-  flutter_animated_icons: ^1.0.1
-  lottie: ^1.4.3
-  flutter_slidable: ^4.0.0
-  local_auth: ^2.3.0
-  connectivity_plus: ^6.1.4
+  vsc_quill_delta_to_html: ^1.0.5
+  flutter_quill_delta_from_html: ^1.5.2
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.3
